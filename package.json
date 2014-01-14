@@ -1,0 +1,27 @@
+{
+  "name": "open",
+  "version": "0.0.1",
+  "private": false,
+  "author": "Dom Parise",
+  "scripts": {
+    "start": "node app.js"
+  },
+  "dependencies": {
+    "express": "latest",
+    "mongojs":"latest",
+    "mongodb":"latest",
+    "connect":"latest",
+    "apn":"latest",
+    "passport-facebook-token":"latest",
+    "passport":"latest",
+    "restify":"latest",
+    "socket.io":"latest",
+    "socket.io-client":"latest"
+  },
+  "devDependencies": {
+    "grunt": "~0.4.2",
+    "grunt-contrib-jshint": "~0.8.0",
+    "grunt-nodemon": "~0.1.2",
+    "express": "~3.4.7"
+  }
+}
