@@ -5,13 +5,13 @@ socket.on('connect', function () {
 	// console.log(socket);
 
 	socket.emit('auth',{
-		id: 'user',
+		name: 'user',
 		token: 3
 	});
 
 	socket.on('authAnswer',function (data) {
 		console.log(data);
-		return socket.emit('join',{event:3});
+		return socket.emit('open',{start:3,end:5});
 	});
 
 

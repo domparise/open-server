@@ -9,7 +9,47 @@ exports.init = function (cb) {
 		Events = db.collection('event');
 
 // custom functions and error handling here
-		
+	
+	Users.remove(function(){});
+	Events.remove(function(){});
+
+	var User = function (id,socket) {
+		this.socket = socket;
+		this.id = id;
+		var users = db.collection('user');
+		var events = db.collection('event');
+		this.open = function (start,end,options,cb) {
+			events.insert({start:start,end:end,attending:[this.id], status:'otb'},{upsert:true},function(err,added){
+				if(err) console.log(err);function(){}
+				users.update({id:this.id}, { $push: {attending: added[0]._id} },function(err){
+					if(err) console.log(err);
+
+					// emit event from socket?
+
+					return cb(added[0]);
+				});
+			});
+		};
+		this.join = function (event,options,cb) {
+			events.findOne({id:event},function(err,joinee){
+				events.find({ attending: this.id, status: 'otb' }).each( function (err,otb) {
+					console.log(otb);
+				});
+			});
+		};
+	}
+
+// people.findOne({ _id: userId }, { likes: 1 }, function (err, person) {
+//     if (err)
+//         throw err; // <-- obviously handle the error better than this
+
+//     people.find({ _id: { $in: person.likes }, likes: userId }).toArray(
+//         function (err, likers) {
+//             //now you have your list of people who liked the user back
+//         }
+//     );
+// });
+
 //////////////////// USER FUNCTIONS ////////////////////
 		Users.all = function (cb) {
 			this.find().toArray( function (err,users) {
@@ -42,12 +82,11 @@ exports.init = function (cb) {
 				friends:friends,
 				devices:devices,
 				notifications:[],
-				info:{
-					name:name,
-					email:email,
-					status:'busy',	//{busy,open,attending}
-					location:null
-				}
+				attending:[],
+				name:name,
+				email:email,
+				status:'busy',	//{busy,open,attending}
+				location:null
 			};
 			this.insert(user,function(err,added){
 				if(err) console.log(err);
@@ -55,8 +94,8 @@ exports.init = function (cb) {
 			});
 		};
 
-		Users.ask = function (id,token,cb) {
-			this.insert({id:id,token:token},{upsert:true},function(err,user){
+		Users.ask = function (name,token,cb) {
+			this.insert({name:name,token:token},{upsert:true},function(err,user){
 				if(err) console.log(err);
 				return cb(user);
 			});
@@ -92,15 +131,12 @@ exports.init = function (cb) {
 
 			}
 			// fetch users events
-			console.log(typeof(user._id));
-			var oid = new ObjectID(user._id);
-			console.log(oid);
-			this.find({attending: oid}).toArray( function (err,events) {
+			this.find({attending:user._id}).toArray( function (err,events) {
 				if(err) console.log(err);
 				console.log(events);
 			});
 		};
 
-		return cb(Users,Events);
+		return cb(User);
 	});
 };
