@@ -9,9 +9,3 @@ socket.on('connect', function () {
 	});
 
 });
-socket.on('custom event', function () {
-  // server emitted a custom event
-});
-socket.on('disconnect', function () {
-  // socket disconnected
-});

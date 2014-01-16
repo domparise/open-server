@@ -1,61 +1,53 @@
 var restify = require('restify'),
 	fs = require('fs'),
 	socketio = require('socket.io'),
-	db = require('./db.js');
+	db = require('./db.js'),
+	clients = {};
 
-// var app = restify.createServer({
-// 	certificate: fs.readFileSync('auth/cert.pem'),
-// 	key: fs.readFileSync('auth/key.pem')
-// });
 var app = restify.createServer();
 var io = socketio.listen(app);
-
-app.use(restify.bodyParser());
-app.use(restify.authorizationParser());
-
-app.use(function (req,res,next) {
-	// console.log(req.headers);
-	// console.log(req.authorization);
-	console.log(req.body);
-	next();
-});
 
 app.listen(3000,function(){
 	console.log('Listening on port 3000');
 });
 
+db.init(function(Users,Events){	
+	// db validation & error handling here
+	// Users.refresh();
+	// Events.refresh();
 
-db.init(function(users,events){	
-
-function auth (req,res,next) {
-	console.log(req.authorization);
-	if(req.authorization.basic.username === 'user' && req.authorization.basic.password === '1234') {
-		users.get(req.body.id, function(user){
-			req.user = user;
-			next();
+	io.sockets.on('connection', function (socket) { 
+		//try to use closures here to set socket?
+// on connection, validate user or make new user, and load model from db
+		clients[socket.id] = socket;
+// challenge userid and token
+		socket.on('auth', function (user) {
+			Users.ask(user.id, user.token, function (user) {
+				console.log('authenticated');
+				clients[socket.id].user = user;
+				socket.emit('authAnswer',user);
+			});
 		});
-	}
-	else res.json({error:'authentication'})
-}
 
-	app.post('/open',auth,function(req,res,next){
-		events.newOtb(req.body.otb,function(otb){
-			console.log(otb);
-			res.json(otb);
+		socket.on('open', function (data) {
+			console.log('open:');
+			Events.newOtb(clients[socket.id].user[0], data, function (otb) {
+				socket.emit('otb',otb);			
+			});
+		});
+
+		socket.on('join', function (data) {
+			Events.join(clients[socket.id].user[0], data, function (event) {
+				socket.emit('event',event);
+			});
+		});
+
+		socket.on('disconnect',function(){
+			delete clients[socket.id];
+			console.log(clients);
 		});
 	});
-
-	app.post('/join',auth,function(req,res,next){
-
-		res.json({});
-	});
-
-	app.post('/suggest',auth,function(req,res,next){
-		res.json({});
-	});
-
-	app.post('/',function(req,res,next){	
-		res.json({});
-	});
-
 });
+
+// clients connected by sockets emit events to friends
+//  

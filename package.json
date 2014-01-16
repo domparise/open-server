@@ -7,21 +7,21 @@
     "start": "node app.js"
   },
   "dependencies": {
-    "express": "latest",
-    "mongojs":"latest",
-    "mongodb":"latest",
-    "connect":"latest",
-    "apn":"latest",
-    "passport-facebook-token":"latest",
-    "passport":"latest",
-    "restify":"latest",
-    "socket.io":"latest",
-    "socket.io-client":"latest"
+    "mongodb": "latest",
+    "apn": "latest",
+    "restify": "latest",
+    "socket.io": "latest",
+    "socket.io-client": "latest"
   },
   "devDependencies": {
     "grunt": "~0.4.2",
     "grunt-contrib-jshint": "~0.8.0",
     "grunt-nodemon": "~0.1.2",
-    "express": "~3.4.7"
+    "express": "~3.4.8",
+    "apn": "~1.4.4",
+    "socket.io": "~0.9.16",
+    "mongodb": "~1.3.23",
+    "restify": "~2.6.1",
+    "socket.io-client": "~0.9.16"
   }
 }
