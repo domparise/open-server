@@ -2,7 +2,10 @@ module.exports = function(grunt) {
   grunt.initConfig({
     pkg: grunt.file.readJSON('package.json'),
     jshint: {
-      src: ['*.js','notifications/*.js','test/*js']
+      src: ['*.js','notifications/*.js','test/*.js'],
+      options: {
+        ignores: ['test/*.min.js','twilio.js']
+      }
     },
     nodemon: {
       dev: {

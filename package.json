@@ -8,10 +8,11 @@
   },
   "dependencies": {
     "mongodb": "latest",
+    "mysql": "latest",
     "apn": "latest",
-    "restify": "latest",
-    "socket.io": "latest",
-    "socket.io-client": "latest"
+    "express.io": "latest",
+    "socket.io-client": "latest",
+    "twilio": "latest"
   },
   "devDependencies": {
     "grunt": "~0.4.2",
