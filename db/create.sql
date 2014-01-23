@@ -18,6 +18,7 @@ DROP TABLE IF EXISTS `User`;
 # (didnt wanna fuck with urlencoding emails)
 CREATE TABLE `User` (
   `uid` int(11) NOT NULL AUTO_INCREMENT,
+  `email` varchar(100) NOT NULL,
   PRIMARY KEY (`uid`)
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
@@ -28,10 +29,13 @@ CREATE TABLE `Event` (
   `start` int(11) NOT NULL,
   `end` int(11) NOT NULL,
   `activity` varchar(100) NOT NULL,
+  `creator` int(11) NOT NULL,
   `descr` varchar(100) DEFAULT NULL,
   `location` point DEFAULT NULL,
   `numAttending` int(11) DEFAULT 1,
   `lastupdate` int(11) NOT NULL,
+  KEY `origin` (`creator`),
+  CONSTRAINT `origin` FOREIGN KEY (`creator`) REFERENCES `User` (`uid`),
   PRIMARY KEY (`eid`)
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
