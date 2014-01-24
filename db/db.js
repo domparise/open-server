@@ -30,11 +30,16 @@ exports.init = function (cb) {
 					sql.query('delete from Event where eid = ?', [otb], function (err, result) {
 						if(err) console.log(err);
 						if (evt.num === 1) { // joining an otb
-							sql.query('update Event set start = ?, end = ?, numAttending = 2, lastUpdate = ? where eid = ?', [Math.max(evt.js,evt.os),Math.min(evt.je,evt.oe),time,join], function (err, res) {
+							var event = {
+								start: Math.max(evt.js,evt.os),
+								end: Math.min(evt.je,evt.oe),
+								eid: join
+							};
+							sql.query('update Event set start = ?, end = ?, numAttending = 2, lastUpdate = ? where eid = ?', [event.start,event.end,time,join], function (err, res) {
 								if(err) console.log(err);
 								sql.query('insert Attends (uid,eid,lastUpdate) values (?,?,?),(?,?,?)', [uid,join,time,evt.oid,join,time], function (err, res) {
 									if(err) console.log(err);
-									return cb({ eid:join });
+									return cb(event);
 								});
 							});
 						} else { // joining an event
@@ -42,7 +47,11 @@ exports.init = function (cb) {
 								if(err) console.log(err);
 								sql.query('insert Attends (uid,eid,lastUpdate) values (?,?,?)', [uid,join,time], function (err, res) {
 									if(err) console.log(err);
-									return cb({ eid:join });
+									return cb({ 
+										start: evt.js,
+										end: evt.je,
+										eid: join  
+									});
 								});
 							});
 						}
