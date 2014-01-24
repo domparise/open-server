@@ -2,7 +2,7 @@ var express = require('express.io'),
 	fs = require('fs'),
 	db = require('./db/db.js'),
 	config = require('./config.js');
-// node version 0.10.25
+	// http://162.243.40.239:3000/
 app = express();
 app.http().io();
 
@@ -11,6 +11,12 @@ app.use(express.static('test'));
 
 db.init( function (users, events) {	
 // db validation & error handling here
+
+	app.get('/reset', function (req, res) {
+		users.remove(function(){});
+		events.remove(function(){});
+		res.send('yolo');
+	});
 
 	app.post('/newUser', function (req, res) {
 		users.insert(req.body, function (err, added) {
