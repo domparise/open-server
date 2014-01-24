@@ -10,6 +10,7 @@ DROP TABLE IF EXISTS `Suggests`;
 DROP TABLE IF EXISTS `Friends`;
 DROP TABLE IF EXISTS `Attends`;
 DROP TABLE IF EXISTS `Event`;
+DROP TABLE IF EXISTS `Otb`;
 DROP TABLE IF EXISTS `User`;
 
 # Represents people using the app
@@ -22,20 +23,25 @@ CREATE TABLE `User` (
   PRIMARY KEY (`uid`)
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
-# Represents events and OTBs
+CREATE TABLE `Otb` (
+  `uid` int(11) NOT NULL,
+  `start` int(11) NOT NULL,
+  `end` int(11) NOT NULL,
+  `type` varchar(100) NOT NULL,
+  `lastupdate` int(11) NOT NULL,
+  PRIMARY KEY (`uid`,`start`,`end`)
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+
+# Represents events
 # base activities:{food,fun,fitness,any,other}
 CREATE TABLE `Event` (
   `eid` int(11) NOT NULL AUTO_INCREMENT,
   `start` int(11) NOT NULL,
   `end` int(11) NOT NULL,
-  `activity` varchar(100) NOT NULL,
-  `creator` int(11) NOT NULL,
-  `descr` varchar(100) DEFAULT NULL,
+  `type` varchar(100) NOT NULL,
   `location` point DEFAULT NULL,
   `numAttending` int(11) DEFAULT 1,
   `lastupdate` int(11) NOT NULL,
-  KEY `origin` (`creator`),
-  CONSTRAINT `origin` FOREIGN KEY (`creator`) REFERENCES `User` (`uid`),
   PRIMARY KEY (`eid`)
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 

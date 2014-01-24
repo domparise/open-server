@@ -4,79 +4,66 @@ var express = require('express.io'),
 	config = require('./config.js');
 
 app = express();
-app.https(config.keys).io();
-// app.http().io();
+app.http().io();
 
-app.use(express.cookieParser());
-app.use(express.session({secret: 'yolo'}));
+app.use(express.json());
 app.use(express.static('test'));
 
-app.get('/', function (req, res) {
-	res.sendfile('test/test.html');
-});
-
-
-db.init( function (User, Utility) {	
+db.init( function (users, events) {	
 // db validation & error handling here
 
-
-/*	Utility.newUser('dom@dom','dom', function (user1) {
-		Utility.newUser('joe@joe','joe', function (user2) {
-			user1.open(1,5, function(otb) {
-				user2.open(2,6,function(join) {
-					user1.join(otb.eid,join.eid,function(res) {
-						console.log(res);
-					});
-				});
-			});
+	app.post('/newUser', function (req, res) {
+		users.insert(req.body, function (err, added) {
+			if(err) console.log(err);
+			return res.json(added[0]);
 		});
-	});*/
+	});
 
 
 	app.post('/open', function (req, res) {
-
-	});
-	app.io.route('open', function (req) {
-		// want req.data to include {start, end}
-		req.session.user.open(req.data.start,req.data.end, function (eid) {
-			req.io.respond(eid);
-			eid.uid = req.session.user.info._id;
-			req.io.join('evt-'+eid.eid);
-			req.io.broadcast('newOTB', eid);
+		users.update({ _id:req.body._id }, { 
+			$push: { otb: req.body.otb }
+		},{upsert:true,multi:false}, function (err, updated) {
+			if(err) console.log(err);
+			return res.json();
 		});
 
 	});
 
 
 	app.post('/join', function (req, res) {
-
-	});
-	app.io.route('join', function (req) {
-		// want req.data as (at least) 
-		// {otb-eid, join-eid}
-		// with uid from auth headers
-		req.io.leave('evt-'+req.data.otb);
-		req.session.user.join(req.data.otb,req.data.join, function(eid) {
-			req.io.respond(eid);
-			eid.uid = req.session.user.info._id;
-			req.io.room('evt-'+eid.eid).broadcast('joined', eid);
-			req.io.join('evt-'+eid.eid);
-		});
-
-	});
-
-
-	app.post('/newUser', function (req, res) {
-
-	});
-	app.io.route('newUser', function (req) {
-		Utility.newUser(req.data.email,req.data.name, function(user) {
-			req.session.user = user;
-			req.session.save( function () {
-				req.io.respond({id:user.info._id});
-			});
+		events.insert(req.body, function (err, added) {
+			if(err) console.log(err);
+			return res.json(added[0]);
 		});
 	});
+
+
+	app.get('/event/:id', function (req, res) {
+		events.find({ _id: Number(req.params.id) }).toArray( function (err, found) {
+			if(err) console.log(err);
+			res.json(found[0]);
+		});
+	});
+	app.get('/events', function (req, res) {
+		events.find().toArray( function (err, found) {
+			res.json(found);
+		});
+	});
+
+
+	app.get('/user/:id', function (req, res) {
+		users.find({ _id: Number(req.params.id) }).toArray( function (err, found) {
+			if(err) console.log(err);
+			res.json(found[0]);
+		});
+	});
+	app.get('/users', function (req, res) {
+		users.find().toArray( function (err, found) {
+			res.json(found);
+		});
+	});
+
 
 	app.listen(3000,function(){
 		console.log('Listening on port 3000');
