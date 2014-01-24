@@ -8,7 +8,6 @@
   },
   "dependencies": {
     "mongodb": "latest",
-    "mysql": "latest",
     "apn": "latest",
     "express.io": "latest",
     "socket.io-client": "latest",

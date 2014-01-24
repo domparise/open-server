@@ -1,8 +1,8 @@
 var config = require('../config.js'),
-	mysql = require('mysql'),
+	// mysql = require('mysql'),
 	mongo = require('mongodb'),
 	ObjectID = mongo.ObjectID;
-var sql = mysql.createConnection(config.mysql);
+// var sql = mysql.createConnection(config.mysql);
 
 exports.init = function (cb) {
 	mongo.MongoClient.connect('mongodb://localhost/open', function (err,db) {
