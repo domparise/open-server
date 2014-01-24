@@ -2,7 +2,7 @@ var express = require('express.io'),
 	fs = require('fs'),
 	db = require('./db/db.js'),
 	config = require('./config.js');
-
+// node version 0.10.25
 app = express();
 app.http().io();
 
