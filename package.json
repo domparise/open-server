@@ -11,7 +11,8 @@
     "apn": "latest",
     "express.io": "latest",
     "socket.io-client": "latest",
-    "twilio": "latest"
+    "twilio": "latest",
+    "socket.io": "latest"
   },
   "devDependencies": {
     "grunt": "~0.4.2",
