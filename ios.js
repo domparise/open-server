@@ -1,14 +1,30 @@
-var express = require('express');
-var app = express();
+var express = require('express'),
+	config = require('./config.js'),
+	app = express(),
+	server = require('https').createServer(config.keys,app),
+	io = require('socket.io').listen(server);
 
-var io = require('socket.io').listen(3000);
+app.use(express.session());
+app.use(express.cookieParser({secret:'yolo'}));
+
+io.configure(function (){
+	io.set('authorization', function (handshakeData, callback) {
+		console.log(handshakeData);
+		callback(null, true); 
+	});
+});
+
 
 io.sockets.on('connection', function (socket) {
-	console.log(socket.id);
-	socket.on('sup', function (data) {
-		console.log(data);
-		console.log('sup event');
-	});
-    socket.emit('yolo', {yolo:'dolo',solo:'dolo'});
 
+    socket.emit('1join', function (data) {
+    	console.log('emit');
+    });
+
+    socket.on('auth', function (data, cb) {
+    	console.log(data);
+    	cb('sup');
+    });
 }); 
+
+server.listen(3000);
