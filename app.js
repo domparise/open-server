@@ -1,48 +1,52 @@
-var express = require('express.io'),
-	fs = require('fs'),
+var express = require('express'),
 	db = require('./db/db.js'),
-	config = require('./config.js');
-	// http://162.243.40.239:3000/
-app = express();
-app.http().io();
-
-app.use(express.json());
-app.use(express.static('test'));
+	config = require('./config.js'),
+	app = express(),
+	server = require('https').createServer(config.keys,app),
+	io = require('socket.io').listen(server);
 
 db.init( function (users, events) {	
 // db validation & error handling here
 
-	app.get('/reset', function (req, res) {
-		users.remove(function(){});
-		events.remove(function(){});
-		res.send('yolo');
-	});
-
-	app.post('/newUser', function (req, res) {
-		users.insert(req.body, function (err, added) {
-			if(err) console.log(err);
-			return res.json(added[0]);
+	io.configure(function (){
+		io.set('authorization', function (req, cb) {
+			req;
+			return cb(null, true); 
 		});
 	});
 
 
-	app.post('/open', function (req, res) {
-		users.update({ _id:req.body._id }, { 
-			$push: { otb: req.body.otb }
-		},{upsert:true,multi:false}, function (err, updated) {
-			if(err) console.log(err);
-			return res.json();
-		});
+	io.sockets.on('connection', function (socket) {
 
-	});
+	    socket.on('open', function (data, cb) {
+	    	// db action
+	    	// push notify
+	    	socket.broadcast.emit('1open',req.otb);
+	    	return cb({}); // return 
+	    });
 
+	    socket.on('join', function (data, cb) {
+	    	// db
+	    	// push notify
+			events.insert(req.body, function (err, added) {
+				if(err) console.log(err);
+				return res.json(added[0]);
+			});
 
-	app.post('/join', function (req, res) {
-		events.insert(req.body, function (err, added) {
-			if(err) console.log(err);
-			return res.json(added[0]);
-		});
-	});
+	    	socket.broadcast.emit('2join',req.evt);
+	    	return cb({}); // return event
+	    });
+
+	    socket.on('newUser', function (data, cb) {
+	    	// db
+	    	users.insert(req.body, function (err, added) {
+				if(err) console.log(err);
+				return res.json(added[0]);
+			});
+
+	    });
+
+	}); 
 
 
 	app.get('/event/:id', function (req, res) {
@@ -51,27 +55,9 @@ db.init( function (users, events) {
 			res.json(found[0]);
 		});
 	});
-	app.get('/events', function (req, res) {
-		events.find().toArray( function (err, found) {
-			res.json(found);
-		});
-	});
 
 
-	app.get('/user/:id', function (req, res) {
-		users.find({ _id: Number(req.params.id) }).toArray( function (err, found) {
-			if(err) console.log(err);
-			res.json(found[0]);
-		});
-	});
-	app.get('/users', function (req, res) {
-		users.find().toArray( function (err, found) {
-			res.json(found);
-		});
-	});
-
-
-	app.listen(3000,function(){
+	server.listen(3000,function(){
 		console.log('Listening on port 3000');
 	});
 

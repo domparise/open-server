@@ -10,9 +10,11 @@ exports.init = function (cb) {
 
 		db.collection('user').remove(function(){}); // users keep track of their otbs, stick to nosql
 		db.collection('event').remove(function(){});
+		db.collection('otb').remove(function(){});
 
 		var users = db.collection('user'),
-			events  = db.collection('events');
+			events  = db.collection('events'),
+			otbs = db.collection('otb');
 			users.ObjectID = ObjectID;
 
 //join
@@ -38,6 +40,6 @@ Update event:
 
 */
 
-		return cb( users,events );
+		return cb( users,events,otbs );
 	});
 };
