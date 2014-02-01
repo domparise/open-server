@@ -3,29 +3,53 @@ var express = require('express'),
 	config = require('./config.js'),
 	app = express(),
 	server = require('https').createServer(config.keys,app),
-	io = require('socket.io').listen(server);
+	io = require('socket.io').listen(server),
+	clients = {};
+
+app.set(express.static('/test'));
 
 db.init( function (users, events) {	
 // db validation & error handling here
 
 	io.configure(function (){
-		io.set('authorization', function (req, cb) {
-			req;
-			return cb(null, true); 
+		io.set('authorization', function (handshake, cb) {
+			if(handshake.query.user < 10)
+				return cb(null, true); 
+			else
+				return cb(null, false);
 		});
 	});
-
+	// user known at this point
 
 	io.sockets.on('connection', function (socket) {
+		// hopefully can use auth step to associate sockets with users at this point
+		clients[socket.id].socket = socket;
 
-	    socket.on('open', function (data, cb) {
+		clients[1].socket = socket;
+		clients[1].user.id = 1;
+
+		socket.on('bind', function (req, cb) {
+			// 'bind' a socket to events attending and friends, so they receive a real time update
+			 
+
+		});
+
+	    socket.on('open', function (req, cb) {
+	    	// request comes in with start, end, type, 
+	    	// assume user known through socket at this point: associative array of users accessed by socket.id
 	    	// db action
 	    	// push notify
+	    	events.insert({ start: req.data.start, end: req.data.end, 
+	    					type: req.data.type, attending:[ clients[1].user.id ] }, 
+	    	function (err, added) {
+	    		if(err) err_handler(err,cb); 
+	    		else return cb({});
+	    	});
+
 	    	socket.broadcast.emit('1open',req.otb);
-	    	return cb({}); // return 
 	    });
 
-	    socket.on('join', function (data, cb) {
+	    socket.on('join', function (req, cb) {
 	    	// db
 	    	// push notify
 			events.insert(req.body, function (err, added) {
@@ -37,7 +61,7 @@ db.init( function (users, events) {
 	    	return cb({}); // return event
 	    });
 
-	    socket.on('newUser', function (data, cb) {
+	    socket.on('newUser', function (req, cb) {
 	    	// db
 	    	users.insert(req.body, function (err, added) {
 				if(err) console.log(err);
@@ -62,6 +86,12 @@ db.init( function (users, events) {
 	});
 
 });
+
+function err (err, cb) {
+	console.log(err);
+	return cb({error:err});
+};
+
 
 // clients connected by sockets emit events to friends
 //  

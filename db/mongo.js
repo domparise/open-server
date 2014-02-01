@@ -10,11 +10,9 @@ exports.init = function (cb) {
 
 		db.collection('user').remove(function(){}); // users keep track of their otbs, stick to nosql
 		db.collection('event').remove(function(){});
-		db.collection('otb').remove(function(){});
 
 		var users = db.collection('user'),
-			events  = db.collection('events'),
-			otbs = db.collection('otb');
+			events  = db.collection('events');
 			users.ObjectID = ObjectID;
 
 //join
@@ -40,6 +38,9 @@ Update event:
 
 */
 
-		return cb( users,events,otbs );
+		return cb( users,events );
+		// treat otbs as events, but with single user attending
+		// core data users are keeping track of their own otbs, and any otb appearing on a feed is attendable
+
 	});
 };

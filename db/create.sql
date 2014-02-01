@@ -15,21 +15,12 @@ DROP TABLE IF EXISTS `User`;
 
 # Represents people using the app
 #
-# will want to change email to not null at release
-# (didnt wanna fuck with urlencoding emails)
 CREATE TABLE `User` (
   `uid` int(11) NOT NULL AUTO_INCREMENT,
   `email` varchar(100) NOT NULL,
+  `token` int(100),
+  `connected` tinyint(1) NOT NULL,
   PRIMARY KEY (`uid`)
-) ENGINE=InnoDB DEFAULT CHARSET=latin1;
-
-CREATE TABLE `Otb` (
-  `uid` int(11) NOT NULL,
-  `start` int(11) NOT NULL,
-  `end` int(11) NOT NULL,
-  `type` varchar(100) NOT NULL,
-  `lastupdate` int(11) NOT NULL,
-  PRIMARY KEY (`uid`,`start`,`end`)
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
 # Represents events
@@ -40,8 +31,7 @@ CREATE TABLE `Event` (
   `end` int(11) NOT NULL,
   `type` varchar(100) NOT NULL,
   `location` point DEFAULT NULL,
-  `numAttending` int(11) DEFAULT 1,
-  `lastupdate` int(11) NOT NULL,
+  `numAttending` int(11) NOT NULL DEFAULT 0,
   PRIMARY KEY (`eid`)
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
@@ -63,11 +53,15 @@ CREATE TABLE `Event` (
  CREATE TABLE `Attends` (
   `uid` int(11) NOT NULL,
   `eid` int(11) NOT NULL,
-  `mid` int(11) DEFAULT NULL,
-  `lastupdate` int(11) NOT NULL,
   KEY `attending` (`eid`),
-  CONSTRAINT `attending` FOREIGN KEY (`eid`) REFERENCES `Event` (`eid`)
+  KEY `user` (`uid`),
+  CONSTRAINT `attendee` FOREIGN KEY (`uid`) REFERENCES `User` (`uid`),
+  CONSTRAINT `attending` FOREIGN KEY (`eid`) REFERENCES `Event` (`eid`) ON DELETE CASCADE,
+  PRIMARY KEY (`eid`,`uid`)
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+
+CREATE TRIGGER incAttending AFTER INSERT ON Attends FOR EACH ROW UPDATE Event SET numAttending = numAttending + 1 WHERE eid=NEW.eid;
+CREATE TRIGGER decAttending AFTER DELETE ON Attends FOR EACH ROW UPDATE Event SET numAttending = numAttending - 1 WHERE eid=OLD.eid;
 
 # Represents friendships
 # relation in both directions indicate pairing
@@ -76,8 +70,7 @@ CREATE TABLE `Event` (
 CREATE TABLE `Friends` (
   `f1` int(11) NOT NULL,
   `f2` int(11) NOT NULL,
-  `visible` int(1) NOT NULL,
-  `lastupdate` int(11) NOT NULL,
+  `visible` tinyint(1) NOT NULL,
   PRIMARY KEY (`f1`,`f2`),
   KEY `with` (`f2`),
   CONSTRAINT `shares` FOREIGN KEY (`f1`) REFERENCES `User` (`uid`),

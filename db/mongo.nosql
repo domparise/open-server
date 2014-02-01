@@ -1,0 +1,4 @@
+
+// finds all otbs
+db.events.find( { attending: { $size: 1 } } );
+
