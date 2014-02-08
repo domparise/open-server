@@ -12,7 +12,8 @@
     "express.io": "latest",
     "socket.io-client": "latest",
     "twilio": "latest",
-    "socket.io": "latest"
+    "socket.io": "latest",
+    "debug":"latest"
   },
   "devDependencies": {
     "grunt": "~0.4.2",

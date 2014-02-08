@@ -10,8 +10,11 @@ server.listen(3000,function(){
 });
 
 
+
+
 io.configure(function (){
 	io.set('authorization', function (handshake, cb) {
+		console.log(handshake);
 		if(handshake.query.user < 10)
 			return cb(null, true); 
 		else
