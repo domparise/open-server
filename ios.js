@@ -5,33 +5,35 @@ var express = require('express'),
 	io = require('socket.io').listen(server);
 
 
-// io.configure(function (){
-// 	io.set('authorization', function (req, cb) {
-// 		req;
-// 		return cb(null, true); 
-// 	});
-// });
+io.configure(function (){
+	io.set('authorization', function (handshake, cb) {
+		console.log(handshake);
+		return cb(null, true); 
+	});
+});
 
 
 io.sockets.on('connection', function (socket) {
 
-    socket.on('authorization', function (req, cb) {
-        console.log(req);
-        return cb(null, true);
-    });
-
     socket.on('open', function (req, cb) {
     	// db action
     	// push notify
-    	socket.broadcast.emit('1open',req.otb);
+    	socket.broadcast.emit('newOtb',req.otb);
     	return cb({}); // return 
     });
 
     socket.on('join', function (req, cb) {
     	// db
     	// push notify
-    	socket.broadcast.emit('2join',req.evt);
+    	socket.broadcast.emit('joinEvent',req.evt);
     	return cb({}); // return event
+    });
+
+    socket.on('update', function (req, cb) {
+        // db
+        // push notify
+        socket.broadcast.emit('updateEvent',req.evt);
+        return cb({}); // return event
     });
 
     socket.on('newUser', function (req, cb) {

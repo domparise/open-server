@@ -1,0 +1,4 @@
+notes.txt:
+
+io.sockets.clients()  gets all clients
+io.sockets.clients('room') gets all clients of particular room

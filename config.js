@@ -22,4 +22,4 @@ exports.mysql = {
 	user: 'root',
 	password: 'sql',
 	database: 'open'
-}; // multipleStatements allows back to back statements
+}; // multipleStatements:true allows back to back statements

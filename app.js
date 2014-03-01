@@ -3,7 +3,8 @@ var express = require('express'),
 	config = require('./config.js'),
 	app = express(),
 	server = require('https').createServer(config.keys,app),
-	io = require('socket.io').listen(server);
+	io = require('socket.io').listen(server, {log:false}),
+	util = require('util');
 
 server.listen(3000,function(){
 	console.log('Listening on port 3000');
@@ -24,40 +25,59 @@ io.sockets.on('connection', function (socket) {
 
 	// 'bind' a socket to events attending and friends, so they receive a real time update
 	//
-	socket.on('bind', function (req, cb) {
-		db.friends(req.user, function (friends) {
+	socket.on('bind', function (data, cb) {
+		db.getFriends(data.user, function (friends) {
 			friends.forEach( function (f) {
-				console.log('friend:'+f.uid);
+				// console.log('friend:'+f.uid);
+				socket.join('friend:'+f.uid);
 			});
 		});
 
-		db.attends(req.user, function (events) {
+		db.getAttended(data.user, function (events) {
 			events.forEach( function (e) {
-				console.log('event:' + e.eid);
+				// console.log('event:' + e.eid);
+				socket.join('event:' + e.eid);
 			});
 		});
 	});
 
-    socket.on('open', function (req, cb) {
-    	// request comes in with start, end, type, 
-    	// assume user known through socket at this point: associative array of users accessed by socket.id
-    	// db action
+    socket.on('open', function (data, cb) {
+    	console.log(util.format('OPEN: %j',data));
+    	db.newOtb(data, function(eid) {
+    		socket.broadcast.to('friend:'+data.uid).emit('newOtb',{
+    			eid:eid,
+    			start:data.start,
+    			end:data.end,
+    			type:data.type,
+    			attendees:[data.uid]
+    		});  		
+    		return cb({eid:eid});
+    	});
     	// push notify
-
-    	socket.broadcast.emit('1open',req.otb);
     });
 
-    socket.on('join', function (req, cb) {
+    socket.on('join', function (data, cb) {
+		console.log(util.format('JOIN: %j',data));
     	// db
     	// push notify
 
-    	socket.broadcast.emit('2join',req.evt);
+    	socket.emit('joinEvent',data.evt);
     	return cb({}); // return event
     });
 
-    socket.on('newUser', function (req, cb) {
+    socket.on('update', function (data, cb) {
+		console.log(util.format('UPDATE: %j',data));
     	// db
+    	// push notify
 
+    	socket.emit('joinEvent',data.evt);
+    	return cb({}); // return event
+    });
+
+    socket.on('newUser', function (data, cb) {
+    	console.log(data);
+    	// db
+    	return cb({});
     });
 
 }); 
