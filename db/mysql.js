@@ -34,28 +34,18 @@ exports.newOtb = function (data, cb) {
 // adds to attending list for event
 // current simple version just adds to attends
 //
-exports.joinEvent = function (uid, otb, join, cb) {
-	sql.query('insert into Attends(uid,eid) values (?,?)', [uid,join], function (err, res) {
+exports.joinEvent = function (uid, eid, cb) {
+	sql.query('insert into Attends(uid,eid) values (?,?)', [uid,eid], function (err, res) {
 		if(err) error(err,cb);
-		if(otb !== 0) {
-			sql.query('delete from Event where eid=?', [otb], function (err, res) {
-				if(err) error(error,cb);
-				return cb({});
-			});
-		}
 		return cb({});
 	});
 };
 
-exports.updateEvent = function (uid, eid, cb) {
-	sql.query('insert into Attends(uid,eid) values (?,?)', [uid,join], function (err, res) {
+// update event information
+//
+exports.updateEvent = function (eid, type, info, cb) {
+	sql.query('update Event set ?=? where eid=?', [type,info,eid], function (err, res) {
 		if(err) error(err,cb);
-		if(otb !== 0) {
-			sql.query('delete from Event where eid=?', [otb], function (err, res) {
-				if(err) error(error,cb);
-				return cb({});
-			});
-		}
 		return cb({});
 	});
 };

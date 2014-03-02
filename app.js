@@ -23,7 +23,8 @@ io.configure(function (){
 
 io.sockets.on('connection', function (socket) {
 
-	// 'bind' a socket to events attending and friends, so they receive a real time update
+	// 'bind' a socket to events attending and friends, so they receive a real time updates
+	// pubsub
 	//
 	socket.on('bind', function (data, cb) {
 		db.getFriends(data.user, function (friends) {
@@ -41,10 +42,20 @@ io.sockets.on('connection', function (socket) {
 		});
 	});
 
+// setTimeout(function() {
+// 	socket.emit('joinEvent',{
+// 		uid:2,
+// 		eid:14
+// 	});
+// },2000);
+
+	// requires: {uid,start,end,type}
+	// emits: newOtb:{eid,start,end,type,attendees[]}
+	// returns: {eid}
     socket.on('open', function (data, cb) {
     	console.log(util.format('OPEN: %j',data));
     	db.newOtb(data, function(eid) {
-    		socket.broadcast.to('friend:'+data.uid).emit('newOtb',{
+    		socket.broadcast.to('friend:'+data.uid).emit('newOtb', {
     			eid:eid,
     			start:data.start,
     			end:data.end,
@@ -56,15 +67,21 @@ io.sockets.on('connection', function (socket) {
     	// push notify
     });
 
+    // requires: {uid,eid}
+    // emits: {uid,eid}
+   	//
     socket.on('join', function (data, cb) {
 		console.log(util.format('JOIN: %j',data));
-    	// db
+		db.joinEvent(data.uid, data.eid, function () {
+			socket.broadcast.to('event:'+data.eid).emit('joinEvent',data);
+			return cb({});
+		});
     	// push notify
-
-    	socket.emit('joinEvent',data.evt);
-    	return cb({}); // return event
     });
 
+    // requires: {uid,eid,field,value}
+    // emits: {eid,field,value}
+    //
     socket.on('update', function (data, cb) {
 		console.log(util.format('UPDATE: %j',data));
     	// db
