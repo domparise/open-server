@@ -1,5 +1,5 @@
 var express = require('express'),
-	db = require('./db/mysql.js'),
+	db = require('./db/testMysql.js'),
 	config = require('./config.js'),
 	app = express(),
 	server = require('https').createServer(config.keys,app),
@@ -13,16 +13,19 @@ function log (str, obj) {
 };
 
 server.listen(3000,function(){
+	log('Listening',{});
 	console.log('Listening on port 3000');
 });
 
 io.configure(function (){
 	io.set('authorization', function (handshake, cb) {
 		log('auth handshake',handshake.query);
-		if(handshake.query.user < 10)
+		console.log('handshaking');
+		if(handshake.query.uid < 10) {
 			return cb(null, true); 
-		else
+		} else {
 			return cb(null, false);
+		}
 	});
 });
 // user known at this point
@@ -48,13 +51,6 @@ io.sockets.on('connection', function (socket) {
 		});
 	});
 
-// setTimeout(function() {
-// socket.emit('joinEvent',{
-// uid:2,
-// eid:14
-// });
-// },2000);
-
 	// requires: {uid,start,end,type}
 	// emits: newOtb:{eid,start,end,type,attendees[]}
 	// returns: success: {eid}, failure: {error}
@@ -64,10 +60,10 @@ io.sockets.on('connection', function (socket) {
 		db.newOtb(data, function(eid) {
 			cb({eid:eid});
 			return socket.broadcast.to('friend:'+data.uid).emit('newOtb', {
-				eid  :eid,
-				start:data.start,
-				end  :data.end,
-				type :data.type,
+				eid  : eid,
+				start: data.start,
+				end  : data.end,
+				type : data.type,
 				attendees:[data.uid]
 			});
 		});
@@ -91,7 +87,7 @@ io.sockets.on('connection', function (socket) {
 	});
 
 	// requires: {uid,eid,field,value}
-	// 		field as in [start,end,type,location]
+	// 	field: [start,end,type,location]
 	// emits: {eid,field,value}
 	// returns: success: {}, failure: {error}
 	socket.on('update', function (data, cb) {
@@ -118,5 +114,60 @@ io.sockets.on('connection', function (socket) {
 		log('DISCONNECT',{socket:socket.id});
 	});
 
+////////////////////////// TEST METHODS ///////////////////////////
+// test remote behavior, like receiving messages on device,
+// test event triggers timeout methods to test behavior
+
+	// requires: {type,name,data{}...}
+	//	type: [socket,push]
+	socket.on('test', function (data) {
+		// phone receiving via socket
+		if (data.type === 'socket') {
+			if (data.name === 'receiveNewOtb') {
+				setTimeout(function() {
+					io.sockets.in('friend:'+data.uid).emit('newOtb', {
+						eid  : eid,
+						start: data.start,
+						end  : data.end,
+						type : data.type,
+						attendees:[data.uid]
+					});
+				}, 1000);
+			} else if (data.name === 'receiveJoin') {
+				setTimeout(function() {
+					io.sockets.in('event:'+data.eid).emit('joinEvent',{
+						uid: data.uid,
+						eid: data.eid
+					});
+				}, 1000);
+			} else if (data.name === 'receiveUpdate') {
+				setTimeout(function() {
+					io.sockets.in('event:'+data.eid).emit('updateEvent',{
+						eid  : data.eid,
+						field: data.field,
+						value: data.value
+					});
+				}, 1000);
+			} else if (data.name === 'createThenJoin') {
+				setTimeout(function() {
+					io.sockets.in('event:'+data.eid).emit('joinEvent',{
+						uid: data.uid,
+						eid: data.eid
+					});
+				}, 5000);
+			}
+		// phone receiving via push notification
+		} else if (data.type === 'push') {
+			if (data.name === 'receiveNewOtb') {
+
+			} else if (data.name === 'receiveJoin') {
+
+			} else if (data.name === 'receiveUpdate') {
+
+			}
+		}
+
+	});
 }); 
+
 

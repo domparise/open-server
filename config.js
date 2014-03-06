@@ -23,3 +23,10 @@ exports.mysql = {
 	password: 'sql',
 	database: 'open'
 }; // multipleStatements:true allows back to back statements
+
+exports.testMysql = {
+	host: '0.0.0.0',
+	user: 'root',
+	password: 'sql',
+	database: 'testOpen'
+};
