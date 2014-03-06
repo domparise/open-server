@@ -7,7 +7,7 @@ var express = require('express'),
 	util = require('util'),
 	fs = require('fs');
 
-var logStream = fs.createWriteStream('logs/app-'+String(Date.now())+'.txt');
+var logStream = fs.createWriteStream('logs/testApp-'+String(Date.now())+'.txt');
 function log (str, obj) {
 	logStream.write(Date.now()+', '+str+', '+util.format('%j',obj)+'\n');
 };

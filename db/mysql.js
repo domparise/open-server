@@ -1,6 +1,13 @@
 config = require('../config.js'),
 	mysql = require('mysql');
-	var sql = mysql.createConnection(config.mysql);
+	var sql = mysql.createConnection(config.mysql),
+	util = require('util'),
+	fs = require('fs');
+
+var errorStream = fs.createWriteStream('logs/dbError-'+String(Date.now())+'.txt');
+function logError (str) {
+	errorStream.write(Date.now()+', '+str+'\n');
+};
 
 // gathers friends list, for binding a user
 exports.getFriends = function (uid, cb) {
@@ -43,8 +50,8 @@ exports.joinEvent = function (uid, eid, cb) {
 
 // update event information
 //
-exports.updateEvent = function (eid, type, info, cb) {
-	sql.query('update Event set ?=? where eid=?', [type,info,eid], function (err, res) {
+exports.updateEvent = function (eid, field, value, cb) {
+	sql.query('update Event set ?=? where eid=?', [field,value,eid], function (err, res) {
 		if(err) error(err,cb);
 		return cb({});
 	});
@@ -53,5 +60,6 @@ exports.updateEvent = function (eid, type, info, cb) {
 
 function error (err,cb) {
 	console.log(err);
+	logError(err);
 	return cb(false);
 };
