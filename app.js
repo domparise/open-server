@@ -10,7 +10,7 @@ var express = require('express'),
 var logStream = fs.createWriteStream('logs/app-'+String(Date.now())+'.txt');
 function log (str, obj) {
 	logStream.write(Date.now()+', '+str+', '+util.format('%j',obj)+'\n');
-};
+}
 
 server.listen(3000,function(){
 	console.log('Listening on port 3000');
@@ -58,8 +58,8 @@ io.sockets.on('connection', function (socket) {
 	// requires: {uid,start,end,type}
 	// emits: newOtb:{eid,start,end,type,attendees[]}
 	// returns: success: {eid}, failure: {error}
-    socket.on('open', function (data, cb) {
-    	log('OPEN',{socket:socket.id,data:data});
+	socket.on('open', function (data, cb) {
+		log('OPEN',{socket:socket.id,data:data});
 		console.log(util.format('OPEN: %j',data));
 		db.newOtb(data, function(eid) {
 			cb({eid:eid});
@@ -91,7 +91,7 @@ io.sockets.on('connection', function (socket) {
 	});
 
 	// requires: {uid,eid,field,value}
-	// 		field as in [start,end,type,location]
+	//	field as in [start,end,type,location]
 	// emits: {eid,field,value}
 	// returns: success: {}, failure: {error}
 	socket.on('update', function (data, cb) {

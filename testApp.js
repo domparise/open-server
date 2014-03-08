@@ -10,7 +10,7 @@ var express = require('express'),
 var logStream = fs.createWriteStream('logs/testApp-'+String(Date.now())+'.txt');
 function log (str, obj) {
 	logStream.write(Date.now()+', '+str+', '+util.format('%j',obj)+'\n');
-};
+}
 
 server.listen(3000,function(){
 	log('Listening',{});
@@ -37,7 +37,7 @@ io.sockets.on('connection', function (socket) {
 	// requires: {uid}
 	// returns: success: {}, failure: {error}
 	socket.on('bind', function (data, cb) {
-		log('BIND',{socket:socket.id,data:data});
+		log('BIND',data);
 		db.getFriends(data.uid, function (friends) {
 			friends.forEach( function (f) {
 				socket.join('friend:'+f.uid);
@@ -54,8 +54,8 @@ io.sockets.on('connection', function (socket) {
 	// requires: {uid,start,end,type}
 	// emits: newOtb:{eid,start,end,type,attendees[]}
 	// returns: success: {eid}, failure: {error}
-    socket.on('open', function (data, cb) {
-    	log('OPEN',{socket:socket.id,data:data});
+	socket.on('open', function (data, cb) {
+		log('OPEN',data);
 		console.log(util.format('OPEN: %j',data));
 		db.newOtb(data, function(eid) {
 			cb({eid:eid});
@@ -74,7 +74,7 @@ io.sockets.on('connection', function (socket) {
 	// emits: {uid,eid}
 	// returns: success: {}, failure: {error}
 	socket.on('join', function (data, cb) {
-		log('JOIN',{socket:socket.id,data:data});
+		log('JOIN',data);
 		console.log(util.format('JOIN: %j',data));
 		db.joinEvent(data.uid, data.eid, function () {
 			cb({});
@@ -87,11 +87,11 @@ io.sockets.on('connection', function (socket) {
 	});
 
 	// requires: {uid,eid,field,value}
-	// 	field: [start,end,type,location]
+	//	field: [start,end,type,location]
 	// emits: {eid,field,value}
 	// returns: success: {}, failure: {error}
 	socket.on('update', function (data, cb) {
-		log('UPDATE',{socket:socket.id,data:data});
+		log('UPDATE',data);
 		console.log(util.format('UPDATE: %j',data));
 		db.updateEvent(data.eid,data.field,data.value, function () {
 			cb({});
@@ -104,7 +104,7 @@ io.sockets.on('connection', function (socket) {
 	});
 
 	socket.on('newUser', function (data, cb) {
-		log('NEWUSER',{socket:socket.id,data:data});
+		log('NEWUSER',data);
 		console.log(util.format('NEWUSER: %j',data));
 		// db
 		return cb({});
@@ -118,39 +118,46 @@ io.sockets.on('connection', function (socket) {
 // test remote behavior, like receiving messages on device,
 // test event triggers timeout methods to test behavior
 
-	// requires: {type,name,data{}...}
+	// requires: {type,name[,data{}...]}
 	//	type: [socket,push]
 	socket.on('test', function (data) {
 		// phone receiving via socket
+		log('TEST',data);
 		if (data.type === 'socket') {
 			if (data.name === 'receiveNewOtb') {
 				setTimeout(function() {
-					io.sockets.in('friend:'+data.uid).emit('newOtb', {
-						eid  : eid,
-						start: data.start,
-						end  : data.end,
-						type : data.type,
-						attendees:[data.uid]
-					});
+					var response = {
+						eid  : data.data.eid,
+						start: data.data.start,
+						end  : data.data.end,
+						type : data.data.type,
+						attendees:[data.data.uid]
+					}
+					log('sending',response);
+					io.sockets.in('friend:'+data.data.uid).emit('newOtb',response);
 				}, 1000);
 			} else if (data.name === 'receiveJoin') {
 				setTimeout(function() {
-					io.sockets.in('event:'+data.eid).emit('joinEvent',{
-						uid: data.uid,
-						eid: data.eid
-					});
+					var response = {
+						uid: data.data.uid,
+						eid: data.data.eid
+					}
+					log('sending',response);
+					io.sockets.in('event:'+data.data.eid).emit('joinEvent',response);
 				}, 1000);
 			} else if (data.name === 'receiveUpdate') {
 				setTimeout(function() {
-					io.sockets.in('event:'+data.eid).emit('updateEvent',{
-						eid  : data.eid,
-						field: data.field,
-						value: data.value
-					});
+					var response = {
+						eid  : data.data.eid,
+						field: data.data.field,
+						value: data.data.value
+					}
+					log('sending',response)
+					io.sockets.in('event:'+data.data.eid).emit('updateEvent',response);
 				}, 1000);
 			} else if (data.name === 'createThenJoin') {
 				setTimeout(function() {
-					io.sockets.in('event:'+data.eid).emit('joinEvent',{
+					io.sockets.in('event:'+data.data.eid).emit('joinEvent',{
 						uid: data.uid,
 						eid: data.eid
 					});

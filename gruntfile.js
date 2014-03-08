@@ -4,7 +4,7 @@ module.exports = function(grunt) {
     jshint: {
       src: ['*.js','notifications/*.js','test/*.js'],
       options: {
-        ignores: ['test/*.min.js','twilio.js']
+        ignores: ['test/*.min.js','twilio.js','interface.js']
       }
     },
     nodemon: {
@@ -12,7 +12,7 @@ module.exports = function(grunt) {
         options: {
           file: 'app.js',
           args: [],
-          ignoredFiles: ['node_modules/**', 'old/**'],
+          ignoredFiles: ['node_modules/**'],
           watchedExtensions: ['js'],
           watchedFolders: ['.'],
           debug: true,

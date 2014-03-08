@@ -51,7 +51,7 @@ exports.joinEvent = function (uid, eid, cb) {
 // update event information
 //
 exports.updateEvent = function (eid, field, value, cb) {
-	sql.query('update Event set ?=? where eid=?', [field,value,eid], function (err, res) {
+	sql.query('update Event set ??=? where eid=?', [field,value,eid], function (err, res) {
 		if(err) error(err,cb);
 		return cb({});
 	});
