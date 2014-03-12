@@ -4,11 +4,6 @@ config = require('../config.js'),
 	util = require('util'),
 	fs = require('fs');
 
-// var errorStream = fs.createWriteStream('logs/tesdDbError-'+String(Date.now())+'.txt');
-// function logError (str) {
-// 	errorStream.write(Date.now()+', '+str+'\n');
-// };
-
 // gathers friends list, for binding a user
 exports.getFriends = function (uid, cb) {
 	sql.query('select f2 as uid from Friends where f1=? and visible=1',[uid], function (err, res) {

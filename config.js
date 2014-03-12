@@ -28,5 +28,5 @@ exports.testMysql = {
 	host: '0.0.0.0',
 	user: 'root',
 	password: 'sql',
-	database: 'testOpen'
+	database: 'testOpen',
 };
