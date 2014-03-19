@@ -188,7 +188,7 @@ if(err) console.log(err);
 							end  : data.data.end,
 							aid : data.data.aid,
 							attendees:[data.data.uid]
-						}
+						};
 						log('sending',response);
 						io.sockets.in('friend:'+data.data.uid).emit('newOtb',response);
 					}, 1000);
@@ -198,7 +198,7 @@ if(err) console.log(err);
 						var response = {
 							uid: data.data.uid,
 							eid: data.data.eid
-						}
+						};
 						log('sending',response);
 						io.sockets.in('event:'+data.data.eid).emit('joinEvent',response);
 					}, 1000);
@@ -209,8 +209,8 @@ if(err) console.log(err);
 							eid  : data.data.eid,
 							field: data.data.field,
 							value: data.data.value
-						}
-						log('sending',response)
+						};
+						log('sending',response);
 						io.sockets.in('event:'+data.data.eid).emit('updateEvent',response);
 					}, 1000);
 				} else if (data.name === 'createThenJoin') {
