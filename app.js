@@ -28,7 +28,7 @@ io.configure(function (){
 			log('unknown user handshaking',handshaking.query);
 			return cb(null, true);
 		} else if (handshake.query.uid > 0) {
-			log('known user handshaking')l
+			log('known user handshaking',{handshake.query});
 			return cb(null, db.authenticate(handshake.query.uid,handshake.query.authToken));
 		} else {
 			return cb(null, false);
