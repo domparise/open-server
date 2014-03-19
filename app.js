@@ -24,9 +24,11 @@ io.configure(function (){
 	io.set('authorization', function (handshake, cb) {
 		log('auth handshake',handshake.query);
 		console.log('handshaking');
-		if (handshake.query.uid === 0 && handshake.query.authToken === 'newUser'){
+		if (handshake.query.uid === '0' && handshake.query.authToken === 'newUser'){
+			log('unknown user handshaking',handshaking.query);
 			return cb(null, true);
 		} else if (handshake.query.uid > 0) {
+			log('known user handshaking')l
 			return cb(null, db.authenticate(handshake.query.uid,handshake.query.authToken));
 		} else {
 			return cb(null, false);
