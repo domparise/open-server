@@ -5,28 +5,37 @@ var express = require('express'),
 	server = require('https').createServer(config.keys,app),
 	io = require('socket.io').listen(server, {log:false}),
 	util = require('util'),
-	fs = require('fs');
+	fs = require('fs'),
+	exec = require('child_process').exec,
+	hat = require('hat');
 
-var logStream = fs.createWriteStream('logs/app-'+String(Date.now())+'.txt');
+var logStream = fs.createWriteStream('logs/testApp-'+String(Date.now())+'.txt');
 function log (str, obj) {
 	logStream.write(Date.now()+', '+str+', '+util.format('%j',obj)+'\n');
 }
 
 server.listen(3000,function(){
+	log('Listening',{});
 	console.log('Listening on port 3000');
 });
 
 io.configure(function (){
+	// requires: {uid,authToken}
 	io.set('authorization', function (handshake, cb) {
 		log('auth handshake',handshake.query);
-		if(handshake.query.user < 10)
-			return cb(null, true); 
-		else
+		console.log('handshaking');
+		if (handshake.query.uid === 0 && handshake.query.authToken === 'newUser'){
+			return cb(null, true);
+		} else if (handshake.query.uid) {
+			return cb(null, db.authenticate(handshake.query.uid,handshake.query.authToken));
+		} else {
 			return cb(null, false);
+		}
 	});
 });
 // user known at this point
 
+var unknownUsers = {};
 io.sockets.on('connection', function (socket) {
 	log('CONNECTION',{socket:socket.id});
 
@@ -34,7 +43,17 @@ io.sockets.on('connection', function (socket) {
 	// requires: {uid}
 	// returns: success: {}, failure: {error}
 	socket.on('bind', function (data, cb) {
-		log('BIND',{socket:socket.id,data:data});
+		log('BIND',data);
+		if (data.uid === 0) {
+			// if user unknown, allows 5 seconds to create new user
+			var authToken = hat();
+			unknownUsers[socket.id].authToken = authToken;
+			unknownUsers[socket.id].timeout = setTimeout( function() {
+				socket.disconnect();
+				delete unknownUsers[socket.id];
+			}, 5000);
+			return cb({authToken:authToken});
+		}
 		db.getFriends(data.uid, function (friends) {
 			friends.forEach( function (f) {
 				socket.join('friend:'+f.uid);
@@ -48,26 +67,39 @@ io.sockets.on('connection', function (socket) {
 		});
 	});
 
-// setTimeout(function() {
-// socket.emit('joinEvent',{
-// uid:2,
-// eid:14
-// });
-// },2000);
+	// requires: {name,email,authToken}
+	// returns: {uid}
+	socket.on('newUser', function (data, cb) {
+		log('NEWUSER',data);
+		if (unknownUsers[socket.id].authToken === data.authToken) {
+			clearTimeout(unknownUsers[socket.id].timeout);
+			db.newUser(data.name,data.email,data.authToken, function (uid) {
+				return cb({uid:uid});
+			});
+		}
+	});
 
-	// requires: {uid,start,end,type}
-	// emits: newOtb:{eid,start,end,type,attendees[]}
+	// requires: {uid,start,end,aid}
+	// emits: newOtb:{eid,start,end,aid,attendees[]}
 	// returns: success: {eid}, failure: {error}
 	socket.on('open', function (data, cb) {
-		log('OPEN',{socket:socket.id,data:data});
+		log('OPEN',data);
 		console.log(util.format('OPEN: %j',data));
 		db.newOtb(data, function(eid) {
+			log('open',{returned:eid,broadcast:{
+				eid  : eid,
+				start: data.start,
+				end  : data.end,
+				aid : data.aid,
+				attendees:[data.uid]
+			}});
+			socket.join('event:'+eid);
 			cb({eid:eid});
 			return socket.broadcast.to('friend:'+data.uid).emit('newOtb', {
-				eid  :eid,
-				start:data.start,
-				end  :data.end,
-				type :data.type,
+				eid  : eid,
+				start: data.start,
+				end  : data.end,
+				aid : data.aid,
 				attendees:[data.uid]
 			});
 		});
@@ -78,9 +110,13 @@ io.sockets.on('connection', function (socket) {
 	// emits: {uid,eid}
 	// returns: success: {}, failure: {error}
 	socket.on('join', function (data, cb) {
-		log('JOIN',{socket:socket.id,data:data});
+		log('JOIN',data);
 		console.log(util.format('JOIN: %j',data));
 		db.joinEvent(data.uid, data.eid, function () {
+			log('join',{broadcast:{
+				uid: data.uid,
+				eid: data.eid
+			}});
 			cb({});
 			return socket.broadcast.to('event:'+data.eid).emit('joinEvent',{
 				uid: data.uid,
@@ -91,11 +127,11 @@ io.sockets.on('connection', function (socket) {
 	});
 
 	// requires: {uid,eid,field,value}
-	//	field as in [start,end,type,location]
+	//	field: [start,end,type,location]
 	// emits: {eid,field,value}
 	// returns: success: {}, failure: {error}
 	socket.on('update', function (data, cb) {
-		log('UPDATE',{socket:socket.id,data:data});
+		log('UPDATE',data);
 		console.log(util.format('UPDATE: %j',data));
 		db.updateEvent(data.eid,data.field,data.value, function () {
 			cb({});
@@ -107,16 +143,31 @@ io.sockets.on('connection', function (socket) {
 		});
 	});
 
-	socket.on('newUser', function (data, cb) {
-		log('NEWUSER',{socket:socket.id,data:data});
-		console.log(util.format('NEWUSER: %j',data));
-		// db
-		return cb({});
+	// requires: {uid,type,title,verb}
+	// returns: {aid}
+	socket.on('createActivity', function (data, cb) {
+		log('CREATEACTIVITY',data);
+		db.createActivity(data.type, data.title, data.verb, function (aid) {
+			return cb({aid:aid});
+		});
+	});
+
+	// requires: {uid,aid}
+	// returns: {aid,type,title,verb}
+	socket.on('fetchActivity', function (data, cb) {
+		log('FETCHACTIVITY',data);
+		db.fetchActivity(data.aid, function (activity) {
+			return cb(activity);
+		});
 	});
 
 	socket.on('disconnect', function () {
 		log('DISCONNECT',{socket:socket.id});
 	});
+});
 
-}); 
-
+app.post('/api/gitpush', function (req, res) {
+	exec('git pull', function() {
+		console.log('pulled update from github');
+	});
+});

@@ -6,7 +6,8 @@ var express = require('express'),
 	io = require('socket.io').listen(server, {log:false}),
 	util = require('util'),
 	fs = require('fs'),
-	exec = require('child_process').exec;
+	exec = require('child_process').exec,
+	hat = require('hat');
 
 var logStream = fs.createWriteStream('logs/testApp-'+String(Date.now())+'.txt');
 function log (str, obj) {
@@ -22,17 +23,22 @@ if(err) console.log(err);
 	});
 
 	io.configure(function (){
+		// requires: {uid,authToken}
 		io.set('authorization', function (handshake, cb) {
 			log('auth handshake',handshake.query);
 			console.log('handshaking');
-			if(handshake.query.uid < 10) {
-				return cb(null, true); 
+			if (handshake.query.uid === 0 && handshake.query.authToken === 'newUser'){
+				return cb(null, true);
+			} else if (handshake.query.uid) {
+				return cb(null, db.authenticate(handshake.query.uid,handshake.query.authToken));
 			} else {
 				return cb(null, false);
 			}
 		});
 	});
 	// user known at this point
+
+	var unknownUsers = {};
 
 	io.sockets.on('connection', function (socket) {
 		log('CONNECTION',{socket:socket.id});
@@ -42,6 +48,16 @@ if(err) console.log(err);
 		// returns: success: {}, failure: {error}
 		socket.on('bind', function (data, cb) {
 			log('BIND',data);
+			if (data.uid === 0) {
+				// if user unknown, allows 5 seconds to create new user
+				var authToken = hat();
+				unknownUsers[socket.id].authToken = authToken;
+				unknownUsers[socket.id].timeout = setTimeout( function() {
+					socket.disconnect();
+					delete unknownUsers[socket.id];
+				}, 5000);
+				return cb({authToken:authToken});
+			}
 			db.getFriends(data.uid, function (friends) {
 				friends.forEach( function (f) {
 					socket.join('friend:'+f.uid);
@@ -55,19 +71,39 @@ if(err) console.log(err);
 			});
 		});
 
-		// requires: {uid,start,end,type}
-		// emits: newOtb:{eid,start,end,type,attendees[]}
+		// requires: {name,email,authToken}
+		// returns: {uid}
+		socket.on('newUser', function (data, cb) {
+			log('NEWUSER',data);
+			if (unknownUsers[socket.id].authToken === data.authToken) {
+				clearTimeout(unknownUsers[socket.id].timeout);
+				db.newUser(data.name,data.email,data.authToken, function (uid) {
+					return cb({uid:uid});
+				});
+			}
+		});
+
+		// requires: {uid,start,end,aid}
+		// emits: newOtb:{eid,start,end,aid,attendees[]}
 		// returns: success: {eid}, failure: {error}
 		socket.on('open', function (data, cb) {
 			log('OPEN',data);
 			console.log(util.format('OPEN: %j',data));
 			db.newOtb(data, function(eid) {
+				log('open',{returned:eid,broadcast:{
+					eid  : eid,
+					start: data.start,
+					end  : data.end,
+					aid : data.aid,
+					attendees:[data.uid]
+				}});
+				socket.join('event:'+eid);
 				cb({eid:eid});
 				return socket.broadcast.to('friend:'+data.uid).emit('newOtb', {
 					eid  : eid,
 					start: data.start,
 					end  : data.end,
-					type : data.type,
+					aid : data.aid,
 					attendees:[data.uid]
 				});
 			});
@@ -81,6 +117,10 @@ if(err) console.log(err);
 			log('JOIN',data);
 			console.log(util.format('JOIN: %j',data));
 			db.joinEvent(data.uid, data.eid, function () {
+				log('join',{broadcast:{
+					uid: data.uid,
+					eid: data.eid
+				}});
 				cb({});
 				return socket.broadcast.to('event:'+data.eid).emit('joinEvent',{
 					uid: data.uid,
@@ -107,11 +147,22 @@ if(err) console.log(err);
 			});
 		});
 
-		socket.on('newUser', function (data, cb) {
-			log('NEWUSER',data);
-			console.log(util.format('NEWUSER: %j',data));
-			// db
-			return cb({});
+		// requires: {uid,type,title,verb}
+		// returns: {aid}
+		socket.on('createActivity', function (data, cb) {
+			log('CREATEACTIVITY',data);
+			db.createActivity(data.type, data.title, data.verb, function (aid) {
+				return cb({aid:aid});
+			});
+		});
+
+		// requires: {uid,aid}
+		// returns: {aid,type,title,verb}
+		socket.on('fetchActivity', function (data, cb) {
+			log('FETCHACTIVITY',data);
+			db.fetchActivity(data.aid, function (activity) {
+				return cb(activity);
+			});
 		});
 
 		socket.on('disconnect', function () {
@@ -130,11 +181,12 @@ if(err) console.log(err);
 			if (data.type === 'socket') {
 				if (data.name === 'receiveNewOtb') {
 					setTimeout(function() {
+						socket.join('friend:'+data.data.uid);
 						var response = {
 							eid  : data.data.eid,
 							start: data.data.start,
 							end  : data.data.end,
-							type : data.data.type,
+							aid : data.data.aid,
 							attendees:[data.data.uid]
 						}
 						log('sending',response);
@@ -142,6 +194,7 @@ if(err) console.log(err);
 					}, 1000);
 				} else if (data.name === 'receiveJoin') {
 					setTimeout(function() {
+						socket.join('event:'+data.data.eid);
 						var response = {
 							uid: data.data.uid,
 							eid: data.data.eid
@@ -151,6 +204,7 @@ if(err) console.log(err);
 					}, 1000);
 				} else if (data.name === 'receiveUpdate') {
 					setTimeout(function() {
+						socket.join('event:'+data.data.eid);
 						var response = {
 							eid  : data.data.eid,
 							field: data.data.field,

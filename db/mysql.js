@@ -27,7 +27,7 @@ exports.getAttended = function (uid, cb) {
 
 // new otb
 exports.newOtb = function (data, cb) {
-	sql.query('insert into Event(start,end,type) values (?,?,?)', [data.uid,data.start,data.end,data.type], function (err, res) {
+	sql.query('insert into Event(start,end,aid) values (?,?,?)', [data.start,data.end,data.aid], function (err, res) {
 		if(err) error(err,cb);
 		sql.query('insert into Attends(uid,eid) values (?,?)', [data.uid,res.insertId], function (err, result) {
 			if(err) error(err,cb);
@@ -51,12 +51,41 @@ exports.joinEvent = function (uid, eid, cb) {
 // update event information
 //
 exports.updateEvent = function (eid, field, value, cb) {
-	sql.query('update Event set ?=? where eid=?', [field,value,eid], function (err, res) {
+	sql.query('update Event set ??=? where eid=?', [field,value,eid], function (err, res) {
 		if(err) error(err,cb);
 		return cb({});
 	});
 };
 
+// creating a new activity
+exports.createActivity = function (type, title, verb, cb) {
+	sql.query('insert into Activity(type,title,verb) values (?,?,?)', [type,title,verb], function (err, res) {
+		if(err) error(err,cb);
+		return cb(res.insertId);
+	});
+};
+
+exports.fetchActivity = function (aid, cb) {
+	sql.query('select * from Activity where aid=?', [aid], function (err, res) {
+		if(err) error(err,cb);
+		return cb({aid:res[0].aid,type:res[0].type,title:res[0].title,verb:res[0].verb});
+	});
+};
+
+exports.newUser = function (name, email, authToken, cb) {
+	sql.query('insert into User(name,email,authToken) values (?,?,?)', [name,email,authToken], function (err, res) {
+		if(err) error(err,cb);
+		return cb(res.insertId);
+	});
+};
+
+exports.authenticate = function (uid, authToken, cb) {
+	sql.query('select name from User where uid=? and authToken=?', [uid,authToken], function (err, res) {
+		if(err) error(err,cb);
+		if (res.length === 1) return true;
+		else return false;
+	});
+};
 
 function error (err,cb) {
 	console.log(err);

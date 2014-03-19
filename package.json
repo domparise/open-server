@@ -13,7 +13,8 @@
     "socket.io-client": "latest",
     "twilio": "latest",
     "socket.io": "latest",
-    "debug":"latest"
+    "foursquarevenues": "latest",
+    "hat": "latest"
   },
   "devDependencies": {
     "grunt": "~0.4.2",
