@@ -3,13 +3,13 @@ var express = require('express'),
 	config = require('./config.js'),
 	app = express(),
 	server = require('https').createServer(config.keys,app),
-	io = require('socket.io').listen(server, {log:false}),
+	io = require('socket.io').listen(server, {log:true}),
 	util = require('util'),
 	fs = require('fs'),
 	exec = require('child_process').exec,
 	hat = require('hat');
 
-var logStream = fs.createWriteStream('logs/testApp-'+String(Date.now())+'.txt');
+var logStream = fs.createWriteStream('logs/app-'+String(Date.now())+'.txt');
 function log (str, obj) {
 	logStream.write(Date.now()+', '+str+', '+util.format('%j',obj)+'\n');
 }
@@ -26,7 +26,7 @@ io.configure(function (){
 		console.log('handshaking');
 		if (handshake.query.uid === 0 && handshake.query.authToken === 'newUser'){
 			return cb(null, true);
-		} else if (handshake.query.uid) {
+		} else if (handshake.query.uid > 0) {
 			return cb(null, db.authenticate(handshake.query.uid,handshake.query.authToken));
 		} else {
 			return cb(null, false);
