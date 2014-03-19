@@ -25,10 +25,10 @@ io.configure(function (){
 		log('auth handshake',handshake.query);
 		console.log('handshaking');
 		if (handshake.query.uid === '0' && handshake.query.authToken === 'newUser'){
-			log('unknown user handshaking',handshaking.query);
+			log('unknown user handshaking',handshake.query);
 			return cb(null, true);
 		} else if (handshake.query.uid > 0) {
-			log('known user handshaking',{handshake.query});
+			log('known user handshaking',handshake.query);
 			return cb(null, db.authenticate(handshake.query.uid,handshake.query.authToken));
 		} else {
 			return cb(null, false);
@@ -49,11 +49,14 @@ io.sockets.on('connection', function (socket) {
 		if (data.uid === 0) {
 			// if user unknown, allows 5 seconds to create new user
 			var authToken = hat();
-			unknownUsers[socket.id].authToken = authToken;
-			unknownUsers[socket.id].timeout = setTimeout( function() {
-				socket.disconnect();
-				delete unknownUsers[socket.id];
-			}, 5000);
+			log('generating authToken for unknown user',{authToken:authToken});
+			unknownUsers[socket.id] = {
+				authToken: authToken,
+					timeout: setTimeout( function() {
+					socket.disconnect();
+					delete unknownUsers[socket.id];
+				}, 5000)
+			};
 			return cb({authToken:authToken});
 		}
 		db.getFriends(data.uid, function (friends) {
