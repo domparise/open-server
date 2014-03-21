@@ -27,13 +27,7 @@ if(err) console.log(err);
 		io.set('authorization', function (handshake, cb) {
 			log('auth handshake',handshake.query);
 			console.log('handshaking');
-			if (handshake.query.uid === 0 && handshake.query.authToken === 'newUser'){
-				return cb(null, true);
-			} else if (handshake.query.uid) {
-				return cb(null, db.authenticate(handshake.query.uid,handshake.query.authToken));
-			} else {
-				return cb(null, false);
-			}
+			return cb(null, true);
 		});
 	});
 	// user known at this point
@@ -48,16 +42,6 @@ if(err) console.log(err);
 		// returns: success: {}, failure: {error}
 		socket.on('bind', function (data, cb) {
 			log('BIND',data);
-			if (data.uid === 0) {
-				// if user unknown, allows 5 seconds to create new user
-				var authToken = hat();
-				unknownUsers[socket.id].authToken = authToken;
-				unknownUsers[socket.id].timeout = setTimeout( function() {
-					socket.disconnect();
-					delete unknownUsers[socket.id];
-				}, 5000);
-				return cb({authToken:authToken});
-			}
 			db.getFriends(data.uid, function (friends) {
 				friends.forEach( function (f) {
 					socket.join('friend:'+f.uid);
@@ -75,12 +59,9 @@ if(err) console.log(err);
 		// returns: {uid}
 		socket.on('newUser', function (data, cb) {
 			log('NEWUSER',data);
-			if (unknownUsers[socket.id].authToken === data.authToken) {
-				clearTimeout(unknownUsers[socket.id].timeout);
-				db.newUser(data.name,data.email,data.authToken, function (uid) {
-					return cb({uid:uid});
-				});
-			}
+			db.newUser(data.name,data.email,data.authToken, function (uid) {
+				return cb({uid:uid});
+			});
 		});
 
 		// requires: {uid,start,end,aid}
