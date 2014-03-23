@@ -72,7 +72,7 @@ CREATE TRIGGER decAttending AFTER DELETE ON Attends FOR EACH ROW UPDATE Event SE
 CREATE TABLE `Friends` (
   `f1` int(11) NOT NULL,
   `f2` int(11) NOT NULL,
-  `visible` tinyint(1) NOT NULL,
+  `visible` tinyint(1) NOT NULL DEFAULT 1,
   PRIMARY KEY (`f1`,`f2`),
   KEY `with` (`f2`),
   CONSTRAINT `shares` FOREIGN KEY (`f1`) REFERENCES `User` (`uid`),

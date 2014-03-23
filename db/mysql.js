@@ -18,6 +18,20 @@ exports.fetchFriends = function (uid, cb) {
 	});
 };
 
+exports.makeFriends = function (uid1, uid2, cb) {
+	sql.query('insert into Friends(f1,f2) values (?,?)', [uid1,uid2], function (err, res) {
+		if(err) error(err,cb);
+		return cb();
+	});
+};
+
+exports.fetchAllPeeps = function (cb) {
+	sql.query('select uid,name from User', function (err, res) {
+		if(err) error(err,cb);
+		return cb(res);
+	});
+};
+
 // gathers attending list, for binding user
 exports.fetchAttended = function (uid, cb) {
 	sql.query('select eid from Attends where uid=?', [uid], function (err, res) {
@@ -83,9 +97,8 @@ exports.newUser = function (name, email, authToken, cb) {
 exports.authenticate = function (uid, authToken, cb) {
 	sql.query('select name from User where uid=? and authToken=?', [uid,authToken], function (err, res) {
 		if(err) error(err,cb);
-		console.log(res);
-		if (res) return true;
-		else return false;
+		if (res) return cb(true);
+		else return cb(false);
 	});
 };
 

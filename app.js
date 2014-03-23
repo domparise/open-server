@@ -3,7 +3,7 @@ var express = require('express'),
 	config = require('./config.js'),
 	app = express(),
 	server = require('https').createServer(config.keys,app),
-	io = require('socket.io').listen(server, {log:false}),
+	io = require('socket.io').listen(server, {log:true}),
 	util = require('util'),
 	fs = require('fs'),
 	exec = require('child_process').exec,
@@ -29,9 +29,9 @@ io.configure(function (){
 			return cb(null, true);
 		} else if (handshake.query.uid > 0) {
 			log('known user handshaking',handshake.query);
-			var ans = db.authenticate(handshake.query.uid,handshake.query.authToken);
-			console.log(ans);
-			return cb(null, ans);
+			db.authenticate(handshake.query.uid,handshake.query.authToken, function (ans) {
+				return cb(null, ans);
+			});
 		} else {
 			return cb(null, false);
 		}
@@ -81,7 +81,15 @@ io.sockets.on('connection', function (socket) {
 		if (unknownUsers[socket.id].authToken === data.authToken) {
 			clearTimeout(unknownUsers[socket.id].timeout);
 			db.newUser(data.name,data.email,data.authToken, function (uid) {
-				return cb({uid:uid});
+				cb({uid:uid});
+				db.fetchAllPeeps(function(peeps) {
+					peeps.forEach( function(elt) {
+						db.makeFriends(uid,elt.uid, function () {
+							if(uid !== elt.uid) socket.emit('newFriend',elt);
+							socket.join('friend:'+elt.uid);
+						});
+					});
+				});
 			});
 		}
 	});
@@ -177,10 +185,11 @@ io.sockets.on('connection', function (socket) {
 		});
 	});
 
+	// requires: {uid}
 	// returns: [{uid,name},...]
 	socket.on('fetchFriends', function (data, cb) {
 		log('FETCHFRIENDS',data);
-		db.fetchFriends(function(friends) {
+		db.fetchFriends(data.uid, function(friends) {
 			return cb(friends);
 		});
 	});
