@@ -29,7 +29,9 @@ io.configure(function (){
 			return cb(null, true);
 		} else if (handshake.query.uid > 0) {
 			log('known user handshaking',handshake.query);
-			return cb(null, db.authenticate(handshake.query.uid,handshake.query.authToken));
+			var ans = db.authenticate(handshake.query.uid,handshake.query.authToken);
+			console.log(ans);
+			return cb(null, ans);
 		} else {
 			return cb(null, false);
 		}
@@ -59,11 +61,11 @@ io.sockets.on('connection', function (socket) {
 			};
 			return cb({authToken:authToken});
 		}
-		db.getFriends(data.uid, function (friends) {
+		db.fetchFriends(data.uid, function (friends) {
 			friends.forEach( function (f) {
 				socket.join('friend:'+f.uid);
 			});
-			db.getAttended(data.uid, function (events) {
+			db.fetchAttended(data.uid, function (events) {
 				events.forEach( function (e) {
 					socket.join('event:' + e.eid);
 				});
@@ -148,6 +150,41 @@ io.sockets.on('connection', function (socket) {
 		});
 	});
 
+	// requires: {eid}
+	// returns: {eid,start,end,aid,attendees[]}
+	socket.on('fetchEvent', function (data, cb) {
+		log('FETCHEVENT',data);
+		db.fetchEvent(data.eid, function(evnt) {
+			return cb(evnt);
+		});
+	});
+
+	// returns [{eid,start,end,aid,attendees[...]},...]
+	socket.on('fetchEvents', function (data, cb) {
+		log('FETCHEVENTS',data);
+		db.fetchAllEvents(function (events) {
+			db.fetchAllAttendees(function (attendees) {
+				for(var i = 0; i < events.length; i++) {
+					events[i].attendees = [];
+					for(var j = 0; j < attendees.length; j++) {
+						if(attendees[j].eid === events[i].eid) {
+							events[i].attendees.push(attendees[j].uid);
+						}
+					}
+				}
+				return cb(events);
+			});
+		});
+	});
+
+	// returns: [{uid,name},...]
+	socket.on('fetchFriends', function (data, cb) {
+		log('FETCHFRIENDS',data);
+		db.fetchFriends(function(friends) {
+			return cb(friends);
+		});
+	});
+
 	// requires: {uid,type,title,verb}
 	// returns: {aid}
 	socket.on('createActivity', function (data, cb) {
@@ -176,3 +213,5 @@ app.post('/api/gitpush', function (req, res) {
 		console.log('pulled update from github');
 	});
 });
+
+process.on("uncaughtException", function(err) { console.log(err); });

@@ -10,15 +10,16 @@ function logError (str) {
 };
 
 // gathers friends list, for binding a user
-exports.getFriends = function (uid, cb) {
-	sql.query('select f2 as uid from Friends where f1=? and visible=1',[uid], function (err, res) {
+exports.fetchFriends = function (uid, cb) {
+	// sql.query('select f2 as uid from Friends where f1=? and visible=1',[uid], function (err, res) {
+	sql.query('select uid,name from User where uid!=?',[uid], function (err, res) {
 		if(err) error(err,cb);
 		return cb(res); 
 	});
 };
 
 // gathers attending list, for binding user
-exports.getAttended = function (uid, cb) {
+exports.fetchAttended = function (uid, cb) {
 	sql.query('select eid from Attends where uid=?', [uid], function (err, res) {
 		if(err) error(err,cb);
 		return cb(res);
@@ -82,8 +83,45 @@ exports.newUser = function (name, email, authToken, cb) {
 exports.authenticate = function (uid, authToken, cb) {
 	sql.query('select name from User where uid=? and authToken=?', [uid,authToken], function (err, res) {
 		if(err) error(err,cb);
-		if (res.length === 1) return true;
+		console.log(res);
+		if (res) return true;
 		else return false;
+	});
+};
+
+exports.fetchEvent = function (eid, cb) {
+	sql.query('select eid,start,end,aid from Event where eid=?',[eid], function (err, evt) {
+		if(err) error(err,cb);
+		sql.query('select uid from Attends where eid=?',[eid], function (err, res) {
+			if(err) error(err,cb);
+			var attnds = [];
+			for (var i = 0; i < res.length; i++) {
+				attnds.push(res[i].uid);
+			}
+			return cb({
+				eid:eid,
+				start:evt[0].start,
+				end:evt[0].end,
+				aid:evt[0].aid,
+				attendees:attnds
+			});
+		});
+	});
+}
+
+// hack kind of thing
+exports.fetchAllEvents = function (cb) {
+	time = Math.floor(Date.now()/1000);
+	sql.query('select eid,start,end,aid from Event where start>?', [time], function (err, res) {
+		if(err) error(err,cb);
+		return cb(res);
+	});
+};
+
+exports.fetchAllAttendees = function (cb) {
+	sql.query('select uid,eid from Attends', function (err, res) {
+		if(err) error(err,cb);
+		return cb(res);
 	});
 };
 
