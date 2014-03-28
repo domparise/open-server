@@ -14,6 +14,17 @@ function log (str, obj) {
 	logStream.write(Date.now()+', '+str+', '+util.format('%j',obj)+'\n');
 }
 
+/*
+setInterval(function() {
+	console.log(io.sockets.manager.rooms);
+	// clients connected in room
+	io.sockets.clients('event:1').forEach( function (client) {
+		console.log(client.id);
+	});
+
+},2000);
+*/
+
 server.listen(3000,function(){
 	log('Listening',{});
 	console.log('Listening on port 3000');
@@ -61,9 +72,10 @@ io.sockets.on('connection', function (socket) {
 			};
 			return cb({authToken:authToken});
 		}
+		socket.uid = data.uid;
 		db.fetchFriends(data.uid, function (friends) {
 			friends.forEach( function (f) {
-				socket.join('friend:'+f.uid);
+				socket.join('user:'+f.uid);
 			});
 			db.fetchAttended(data.uid, function (events) {
 				events.forEach( function (e) {
@@ -86,7 +98,7 @@ io.sockets.on('connection', function (socket) {
 					peeps.forEach( function(elt) {
 						db.makeFriends(uid,elt.uid, function () {
 							if(uid !== elt.uid) socket.emit('newFriend',elt);
-							socket.join('friend:'+elt.uid);
+							socket.join('user:'+elt.uid);
 						});
 					});
 				});
@@ -110,7 +122,7 @@ io.sockets.on('connection', function (socket) {
 			}});
 			socket.join('event:'+eid);
 			cb({eid:eid});
-			return socket.broadcast.to('friend:'+data.uid).emit('newOtb', {
+			return socket.broadcast.to('user:'+data.uid).emit('newOtb', {
 				eid  : eid,
 				start: data.start,
 				end  : data.end,
@@ -154,6 +166,20 @@ io.sockets.on('connection', function (socket) {
 				eid  : data.eid,
 				field: data.field,
 				value: data.value
+			});
+		});
+	});
+
+	// requires: {uid, update:{field:val} }
+	// emits: {uid, update:{field:val} }
+	socket.on('updateUser', function (data, cb) {
+		log('UPDATEUSER',data);
+		console.log(util.format('UPDATEUSER: %j',data));
+		db.updateUser(data.uid,data.update, function() {
+			cb({});
+			return socket.broadcast.to('user:'+data.uid).emit('updateUser',{
+				uid: data.uid,
+				update: data.update
 			});
 		});
 	});
