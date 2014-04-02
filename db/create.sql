@@ -20,11 +20,11 @@ CREATE TABLE `User` (
   `uid` int(11) NOT NULL AUTO_INCREMENT,
   `name` varchar(100) NOT NULL,
   `email` varchar(100) NOT NULL,
-  `authToken` int(100),
-  `deviceToken` int(100),
-  `connected` tinyint(1) NOT NULL,
+  `authToken` int(100) DEFAULT NULL,
+  `deviceToken` int(100) DEFAULT NULL,
+  PRIMARY KEY (`name`,`email`),
   KEY `uid` (`uid`),
-  PRIMARY KEY (`name`,`email`)
+  KEY `userHash` (`uid`,`email`) USING HASH
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
 # Represents event activities
@@ -46,6 +46,7 @@ CREATE TABLE `Event` (
   `location` point DEFAULT NULL,
   `numAttending` int(11) NOT NULL DEFAULT 0,
   KEY `activity` (`aid`),
+  KEY `eventHash` (`eid`,`aid`) USING HASH,
   CONSTRAINT `activity` FOREIGN KEY (`aid`) REFERENCES `Activity` (`aid`),
   PRIMARY KEY (`eid`)
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
@@ -76,7 +77,8 @@ CREATE TABLE `Friends` (
   PRIMARY KEY (`f1`,`f2`),
   KEY `with` (`f2`),
   CONSTRAINT `shares` FOREIGN KEY (`f1`) REFERENCES `User` (`uid`),
-  CONSTRAINT `with` FOREIGN KEY (`f2`) REFERENCES `User` (`uid`)
+  CONSTRAINT `with` FOREIGN KEY (`f2`) REFERENCES `User` (`uid`),
+  KEY `userFriendHash` (`f1`,`f2`) USING HASH
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
 # Base Activities
@@ -84,3 +86,14 @@ insert into Activity(type,title,verb) values ('Anything','Anything','do somethin
 insert into Activity(type,title,verb) values ('Food','Food','get food'); #2
 insert into Activity(type,title,verb) values ('Fun','Fun','do something fun'); #3
 insert into Activity(type,title,verb) values ('Fitness','Fitness','work out'); #4
+
+# Push notifications
+# considered having notification id
+CREATE TABLE `Notification` (
+  `uid` int(11) NOT NULL,
+  `json` varchar(256) NOT NULL,
+  `time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  KEY `user` (`uid`),
+  KEY `userNoteHash` (`uid`) USING HASH,
+  CONSTRAINT `user` FOREIGN KEY (`uid`) REFERENCES `User` (`uid`)
+) ENGINE=InnoDB DEFAULT CHARSET=latin1

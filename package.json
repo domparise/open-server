@@ -7,11 +7,8 @@
     "start": "node app.js"
   },
   "dependencies": {
-    "mongodb": "latest",
     "apn": "latest",
-    "express.io": "latest",
-    "socket.io-client": "latest",
-    "twilio": "latest",
+    "express": "latest",
     "socket.io": "latest",
     "foursquarevenues": "latest",
     "hat": "latest"
@@ -22,9 +19,6 @@
     "grunt-nodemon": "~0.1.2",
     "express": "~3.4.8",
     "apn": "~1.4.4",
-    "socket.io": "~0.9.16",
-    "mongodb": "~1.3.23",
-    "restify": "~2.6.1",
-    "socket.io-client": "~0.9.16"
+    "socket.io": "~0.9.16"
   }
 }

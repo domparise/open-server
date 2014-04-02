@@ -1,4 +1,4 @@
-config = require('../config.js'),
+var config = require('../config.js'),
 	mysql = require('mysql');
 	var sql = mysql.createConnection(config.mysql),
 	util = require('util'),
@@ -41,10 +41,10 @@ exports.fetchAttended = function (uid, cb) {
 };
 
 // new otb
-exports.newOtb = function (data, cb) {
-	sql.query('insert into Event(start,end,aid) values (?,?,?)', [data.start,data.end,data.aid], function (err, res) {
+exports.newOtb = function (uid, start, end, aid, cb) {
+	sql.query('insert into Event(start,end,aid) values (?,?,?)', [start,end,aid], function (err, res) {
 		if(err) error(err,cb);
-		sql.query('insert into Attends(uid,eid) values (?,?)', [data.uid,res.insertId], function (err, result) {
+		sql.query('insert into Attends(uid,eid) values (?,?)', [uid,res.insertId], function (err, result) {
 			if(err) error(err,cb);
 			return cb(res.insertId);
 		});
@@ -63,27 +63,11 @@ exports.joinEvent = function (uid, eid, cb) {
 	});
 };
 
-// update event information
-//
-exports.updateEvent = function (eid, field, value, cb) {
-	sql.query('update Event set ??=? where eid=?', [field,value,eid], function (err, res) {
-		if(err) error(err,cb);
-		return cb({});
-	});
-};
-
-exports.updateUser = function (uid, update, cb) {
-	sql.query('update User set ? where uid=?',[update,uid], function (err, res) {
-		if(err) error(err,cb);
-		return cb({});
-	});
-};
-
 // creating a new activity
-exports.createActivity = function (type, title, verb, cb) {
+exports.newActivity = function (type, title, verb, cb) {
 	sql.query('insert into Activity(type,title,verb) values (?,?,?)', [type,title,verb], function (err, res) {
 		if(err) error(err,cb);
-		return cb(res.insertId);
+		return cb({aid:res[0].insertId});
 	});
 };
 
@@ -144,6 +128,55 @@ exports.fetchAllAttendees = function (cb) {
 		return cb(res);
 	});
 };
+
+///////////////// New Methods /////////////////
+
+exports.update = function (type, id, update, cb) {
+	var table = '';
+	var idType = '';
+	if (type === 'updateUser') {
+		table = 'User';
+		idType = 'uid';
+	} else if (type === 'updateEvent') {
+		table = 'Event';
+		idType = 'eid';
+	}
+	sql.query('update ?? set ? where ??=?',[table,update,idType,id], function (err, res) {
+		if(err) error(err, cb);
+		return cb({});
+	});
+};
+
+exports.fetch = function (type, value, cb) {
+	var table = '';
+	if (type === 'uid') table = 'User';
+	else if (type === 'eid') table = 'Event';
+	else if (type === 'aid') table = 'Activity';
+	sql.query('select * from ?? where ??=?',[table,type,value], function (err, res) {
+		if(err) error(err,cb);
+		else if (type === 'eid') {
+			sql.query('select uid from Attends where eid=?',[eid], function (err, result) {
+				if(err) error(err,cb);
+				var attends = [];
+				for (var i = 0; i < result.length; i++) {
+					attends.push(result[i].uid);
+				}
+				return cb({
+					eid:eid,
+					start: res[0].start,
+					end: res[0].end,
+					aid: res[0].aid,
+					attendees: attends
+				});
+			});
+		}
+		else return cb(res[0]);
+	});
+};
+
+exports.fetchAll = function (type, cb) {
+	error('not implemented',cb);
+}
 
 exports.devicesForEventPush = function (eid, sockets, cb) {
 	sql.query('select u.deviceToken from Attends a, User u where a.eid=? and a.uid=u.uid and a.uid!=?', [eid,sockets], function (err, res) {
