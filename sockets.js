@@ -13,7 +13,7 @@ server.listen(3000,function(){
 });
 
 var unknownUsers = {};
-exports.handle = function (auth, bind, newUser, newOtb, newActivity, update, fetch, fetchAll) {
+exports.handle = function (auth, bind, add, update, fetch, fetchAll, disconnect) {
 
 	io.configure(function (){
 		// requires: {uid,authToken}
@@ -60,41 +60,27 @@ exports.handle = function (auth, bind, newUser, newOtb, newActivity, update, fet
 			return bind(data.uid, socket, cb);
 		});
 
-		// requires: {name,email,authToken}
-		// returns: {uid}
-		socket.on('newUser', function (data, cb) {
-			log('NEWUSER',data);
-			if (unknownUsers[socket.id].authToken === data.authToken) {
-				clearTimeout(unknownUsers[socket.id].timeout);
-				return newUser(data.name, data.email, data.authToken, socket, cb);
-			}
+		// requires: {uid, type, info:{...} }
+		// 	type: [user, event, activity]
+		// info: 	user: {name,email,authTOken}
+		// 			event: {start,end,aid}
+		// 			activity: {type,title,verb}
+		// returns: [uid,eid,aid]
+		socket.on('add', function (data, cb) {
+			log('ADD',data);
+			console.log(util.format('ADD: %j',data));
+			return add( data.uid, data.type, data.info, socket, cb);
 		});
 
-		// requires: {uid,start,end,aid}
-		// emits: newOtb:{eid,start,end,aid,attendees[]}
-		// returns: success: {eid}, failure: {error}
-		socket.on('newOtb', function (data, cb) {
-			log('OPEN',data);
-			console.log(util.format('OPEN: %j',data));
-			return newOtb(data.uid, data.start, data.end, data.aid, socket, cb);
-		});
-
-		// requires: {uid,type,title,verb}
-		// returns: {aid}
-		socket.on('newActivity', function (data, cb) {
-			log('NEWACTIVITY',data);
-			return newActivity(data.type, data.title, data.verb, cb);
-		});
-
-		// requires: {type, uid/eid, update:{field,value} }
+		// requires: {uid, type, info: {id,field,value} }
 		//	field: [start,end,type,location,attendees]
-		//	type: [updateEvent,updateUser]
-		// emits: {eid/uid, update: {field,value} }
+		//	type: [user, event]
+		// emits: {type, update: {id,field,value} }
 		// returns: success: {}, failure: {error}
 		socket.on('update', function (data, cb) {
 			log('UPDATE',data);
 			console.log(util.format('UPDATE: %j',data));
-			return update(uid, eid, update, socket, cb);
+			return update( data.uid, data.type, data.info, socket, cb);
 		});
 
 		// requires: {type, value}
@@ -111,6 +97,12 @@ exports.handle = function (auth, bind, newUser, newOtb, newActivity, update, fet
 
 		socket.on('disconnect', function () {
 			log('DISCONNECT',{socket:socket.id});
+			disconnect(socket.uid);
 		});
 	});
 }
+
+exports.uids = function (room, uid) {
+
+};
+

@@ -6,7 +6,6 @@
 *   run queries.sql to populate with sample
 */
 
-DROP TABLE IF EXISTS `Suggests`;
 DROP TABLE IF EXISTS `Friends`;
 DROP TABLE IF EXISTS `Attends`;
 DROP TABLE IF EXISTS `Event`;
@@ -22,10 +21,25 @@ CREATE TABLE `User` (
   `email` varchar(100) NOT NULL,
   `authToken` int(100) DEFAULT NULL,
   `deviceToken` int(100) DEFAULT NULL,
+  `noteCount` int(11) NOT NULL DEFAULT 0,
   PRIMARY KEY (`name`,`email`),
   KEY `uid` (`uid`),
   KEY `userHash` (`uid`,`email`) USING HASH
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+
+# Push notifications
+# considered having notification id
+CREATE TABLE `Notification` (
+  `uid` int(11) NOT NULL,
+  `json` varchar(256) NOT NULL,
+  `time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  KEY `user` (`uid`),
+  KEY `userNoteHash` (`uid`) USING HASH,
+  CONSTRAINT `user` FOREIGN KEY (`uid`) REFERENCES `User` (`uid`)
+) ENGINE=InnoDB DEFAULT CHARSET=latin1
+
+CREATE TRIGGER incNotification AFTER INSERT ON Notification FOR EACH ROW UPDATE User SET noteCount = noteCount + 1 WHERE uid=NEW.uid;
+CREATE TRIGGER decNotification AFTER DELETE ON Notification FOR EACH ROW UPDATE User SET noteCount = noteCount - 1 WHERE uid=OLD.uid;
 
 # Represents event activities
 # activity types:{food,fun,fitness,anything,other}
@@ -87,13 +101,3 @@ insert into Activity(type,title,verb) values ('Food','Food','get food'); #2
 insert into Activity(type,title,verb) values ('Fun','Fun','do something fun'); #3
 insert into Activity(type,title,verb) values ('Fitness','Fitness','work out'); #4
 
-# Push notifications
-# considered having notification id
-CREATE TABLE `Notification` (
-  `uid` int(11) NOT NULL,
-  `json` varchar(256) NOT NULL,
-  `time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  KEY `user` (`uid`),
-  KEY `userNoteHash` (`uid`) USING HASH,
-  CONSTRAINT `user` FOREIGN KEY (`uid`) REFERENCES `User` (`uid`)
-) ENGINE=InnoDB DEFAULT CHARSET=latin1

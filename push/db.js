@@ -7,24 +7,33 @@ function logError (str) {
 	errorStream.write(Date.now()+', '+str+'\n');
 };
 
-function addNotification (userRes, note, cb) {
-	var arr = userRes.map(function (elt) {return [elt.uid,note]});
+function fetchDevices (users, note, cb) {
+	var arr = users.map(function (elt) {return elt.uid});
+	sql.query('select deviceToken,noteCount from User where uid=?', [arr], function (err, res) {
+		if(err) error(err,cb);
+		return cb(res);
+	});
+};
+
+function addNotification (users, note, cb) {
+	var arr = users.map(function (elt) {return [elt.uid,note]});
 	sql.query('insert into Notification (uid,json) values ?', [arr], function (err, res) {
 		if(err) error(err,cb);
-		return cb(arr);
+		return fetchDevices(users, note, cb);
 	});
 };
 
 // requires socketUsers as array of uids
-exports.notifyFriends = function (uid, socketUsers, note, cb) {
-	sql.query('select uid from Friends where f1=? and visible=1 and f2!=?', [uid, socketUsers], function (err, res) {
+exports.notifyFriends = function (uid, connectedUsers, note, cb) {
+	sql.query('select uid from Friends where f1=? and visible=1 and f2!=?', [uid, connectedUsers], function (err, res) {
 		if(err) error(err,cb);
 		return addNotification(res,note,cb);
 	});
 };
 
-exports.notifyEvent = function (eid, socketUsers, note, cb) {
-	sql.query('select uid from Attends where eid=? and uid!=?', [eid,socketUsers], function (err, res) {
+// requires socketUsers as array of uids
+exports.notifyEvent = function (eid, connectedUsers, note, cb) {
+	sql.query('select uid from Attends where eid=? and uid!=?', [eid,connectedUsers], function (err, res) {
 		if(err) error(err,cb);
 		return addNotification(res,note,cb);
 	});
@@ -36,8 +45,6 @@ exports.fetchNotifications = function (uid, cb) {
 		return cb(res);
 	});
 };
-
-//var a2 = arr.map(function(elt) {return elt.uid});
 
 function error (err,cb) {
 	console.log(err);

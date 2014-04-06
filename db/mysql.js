@@ -178,20 +178,6 @@ exports.fetchAll = function (type, cb) {
 	error('not implemented',cb);
 }
 
-exports.devicesForEventPush = function (eid, sockets, cb) {
-	sql.query('select u.deviceToken from Attends a, User u where a.eid=? and a.uid=u.uid and a.uid!=?', [eid,sockets], function (err, res) {
-		if(err) error(err,cb);
-		return cb(res);
-	});
-};
-
-// requires: sockets: [uid,uid,...]
-exports.devicesForFriendPush = function (uid, sockets, cb) {
-	sql.query('select u.deviceToken from Friends f, User u where u.uid!=? and u.uid!=? and ((f.f1=u.uid and f.f2=?)or(f.f1=? and f.f2=u.uid))', [uid,sockets,uid,uid], function (err, res) {
-		if(err) error(err,cb);
-		return cb(res);
-	});
-};
 
 function error (err,cb) {
 	console.log(err);
