@@ -11,6 +11,7 @@ DROP TABLE IF EXISTS `Attends`;
 DROP TABLE IF EXISTS `Event`;
 DROP TABLE IF EXISTS `Activity`;
 DROP TABLE IF EXISTS `Otb`;
+DROP TABLE IF EXISTS `Notification`;
 DROP TABLE IF EXISTS `User`;
 
 # Represents people using the app
@@ -36,7 +37,7 @@ CREATE TABLE `Notification` (
   KEY `user` (`uid`),
   KEY `userNoteHash` (`uid`) USING HASH,
   CONSTRAINT `user` FOREIGN KEY (`uid`) REFERENCES `User` (`uid`)
-) ENGINE=InnoDB DEFAULT CHARSET=latin1
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
 CREATE TRIGGER incNotification AFTER INSERT ON Notification FOR EACH ROW UPDATE User SET noteCount = noteCount + 1 WHERE uid=NEW.uid;
 CREATE TRIGGER decNotification AFTER DELETE ON Notification FOR EACH ROW UPDATE User SET noteCount = noteCount - 1 WHERE uid=OLD.uid;

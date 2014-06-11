@@ -25,16 +25,17 @@ exports.makeFriends = function (uid1, uid2, cb) {
 	});
 };
 
-exports.fetchAllPeeps = function (cb) {
-	sql.query('select uid,name from User', function (err, res) {
+
+// gathers attending list, for binding user
+exports.fetchAttended = function (uid, cb) {
+	sql.query('select eid from Attends where uid=?', [uid], function (err, res) {
 		if(err) error(err,cb);
 		return cb(res);
 	});
 };
 
-// gathers attending list, for binding user
-exports.fetchAttended = function (uid, cb) {
-	sql.query('select eid from Attends where uid=?', [uid], function (err, res) {
+exports.fetchAllPeeps = function (cb) {
+	sql.query('select uid,name from User', function (err, res) {
 		if(err) error(err,cb);
 		return cb(res);
 	});
@@ -46,6 +47,7 @@ exports.newOtb = function (uid, start, end, aid, cb) {
 		if(err) error(err,cb);
 		sql.query('insert into Attends(uid,eid) values (?,?)', [uid,res.insertId], function (err, result) {
 			if(err) error(err,cb);
+			console.log(res)
 			return cb(res.insertId);
 		});
 	});
@@ -71,13 +73,6 @@ exports.newActivity = function (type, title, verb, cb) {
 	});
 };
 
-exports.fetchActivity = function (aid, cb) {
-	sql.query('select * from Activity where aid=?', [aid], function (err, res) {
-		if(err) error(err,cb);
-		return cb({aid:res[0].aid,type:res[0].type,title:res[0].title,verb:res[0].verb});
-	});
-};
-
 exports.newUser = function (name, email, authToken, cb) {
 	sql.query('insert into User(name,email,authToken) values (?,?,?)', [name,email,authToken], function (err, res) {
 		if(err) error(err,cb);
@@ -90,42 +85,6 @@ exports.authenticate = function (uid, authToken, cb) {
 		if(err) error(err,cb);
 		if (res) return cb(true);
 		else return cb(false);
-	});
-};
-
-exports.fetchEvent = function (eid, cb) {
-	sql.query('select eid,start,end,aid from Event where eid=?',[eid], function (err, evt) {
-		if(err) error(err,cb);
-		sql.query('select uid from Attends where eid=?',[eid], function (err, res) {
-			if(err) error(err,cb);
-			var attnds = [];
-			for (var i = 0; i < res.length; i++) {
-				attnds.push(res[i].uid);
-			}
-			return cb({
-				eid:eid,
-				start:evt[0].start,
-				end:evt[0].end,
-				aid:evt[0].aid,
-				attendees:attnds
-			});
-		});
-	});
-}
-
-// hack kind of thing
-exports.fetchAllEvents = function (cb) {
-	time = Math.floor(Date.now()/1000);
-	sql.query('select eid,start,end,aid from Event where start>?', [time], function (err, res) {
-		if(err) error(err,cb);
-		return cb(res);
-	});
-};
-
-exports.fetchAllAttendees = function (cb) {
-	sql.query('select uid,eid from Attends', function (err, res) {
-		if(err) error(err,cb);
-		return cb(res);
 	});
 };
 
@@ -173,11 +132,6 @@ exports.fetch = function (type, value, cb) {
 		else return cb(res[0]);
 	});
 };
-
-exports.fetchAll = function (type, cb) {
-	error('not implemented',cb);
-}
-
 
 function error (err,cb) {
 	console.log(err);

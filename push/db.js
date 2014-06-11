@@ -39,6 +39,8 @@ exports.notifyEvent = function (eid, connectedUsers, note, cb) {
 	});
 };
 
+// need to add callback acknowledgement to delete / clear notification log
+// also need to consider adding TTL on notifications / updates
 exports.fetchNotifications = function (uid, cb) {
 	sql.query('select json from Notification where uid=?', [uid], function (err, res) {
 		if(err) error(err,cb);

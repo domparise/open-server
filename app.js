@@ -1,11 +1,9 @@
-var express = require('express'),
-	db = require('./db/mysql.js'),
+var db = require('./db/mysql.js'),
 	config = require('./config.js'),
 	sockets = require('./sockets.js'),
 	push = require('./push/push.js'),
 	util = require('util'),
 	fs = require('fs'),
-	hat = require('hat'),
 	connected = {};
 
 var logStream = fs.createWriteStream('logs/app-'+String(Date.now())+'.txt');
@@ -13,33 +11,32 @@ function log (str, obj) {
 	logStream.write(Date.now()+', '+str+', '+util.format('%j',obj)+'\n');
 }
 
-server.listen(3000,function(){
-	log('Listening',{});
-	console.log('Listening on port 3000');
-});
+//////////// pubsub ////////////
 
 function pubsub (room, uid) {
-	if !(room in connected) connected[room] = {};
+	if (!(room in connected)) connected[room] = {};
 	connected[room][uid] = true;
-};
+}
 function unpubsub (uid) {
 	for (var room in connected) {
 		delete connected[room][uid];
 	}
-};
+}
 function uids (room, uid) {
-	return Object.keys(connected[room]).map(function(elt){return elt});
+	return Object.keys(connected[room]).map(function(elt){return elt;});
 }
 
-sockets.handle( db.authenticate, bind, add, update, db.fetch, db.fetchAll, unpubsub);
+/////////////// socket handlers ////////////////
+
+sockets.handle( db.authenticate, bind, add, update, push.fetch, unpubsub);
 
 function bind (uid, socket, cb) {
-	db.fetchFriends(data.uid, function (friends) {
+	db.fetchFriends(uid, function (friends) {
 		friends.forEach( function (f) {
 			socket.join('user:'+f.uid);
 			pubsub('user:'+f.uid,uid);
 		});
-		db.fetchAttended(data.uid, function (events) {
+		db.fetchAttended(uid, function (events) {
 			events.forEach( function (e) {
 				socket.join('event:'+e.eid);
 				pubsub('event:'+e.eid,uid);
@@ -47,7 +44,7 @@ function bind (uid, socket, cb) {
 			return cb({});
 		});
 	});
-};
+}
 
 function add (uid, type, info, socket, cb) {
 	if (type == 'user') 
@@ -55,10 +52,10 @@ function add (uid, type, info, socket, cb) {
 	else if (type == 'event')
 		newOtb( uid, info.start, info.end, info.aid, socket, cb);
 	else if (type == 'activity') 
-		db.newActivity( info.type, info.title, info.verb, function (aid) {
-			return cb({aid:aid});
-		});
-};
+		newActivity( uid, info.type, info.title, info.verb, socket, cb);
+	else if (type == 'join')
+		joinEvent( uid, info.eid, info.evts, socket, cb);
+}
 
 function newUser (name, email, authToken, socket, cb) {
 	db.newUser( name, email, authToken, function (uid) {
@@ -72,40 +69,64 @@ function newUser (name, email, authToken, socket, cb) {
 			});
 		});
 	});
-};
+}
 
 function newOtb (uid, start, end, aid, socket, cb) {
 	db.newOtb(uid,start,end,aid, function(eid) {
-		var response = {
+		socket.join('event:'+eid);
+		cb({eid:eid});
+		var res = {
 			eid  : eid,
 			start: start,
 			end  : end,
-			aid : aid,
+			aid  : aid,
 			attendees:[uid]
 		};
-		log('open',{returned:eid,broadcast:response});
-		socket.join('event:'+eid);
-		cb({eid:eid});
-		socket.broadcast.to('user:'+uid).emit('newOtb', response);
-		return push.friends(uid, uids('user:'+uid,uid), response, function() {});
+		socket.broadcast.to('user:'+uid).emit('newOtb', res);
+		return push.friends(uid, uids('user:'+uid,uid), {evt:'newOtb',info:res});
 	});
 }
 
-function update (uid, type, info, socket, cb) {
-	var room = String(info.id);
-	var response = { update: info };
-	if (type === 'updateEvent') {
-		room = 'event:'+room;
-		response.eid = eid;
-	} else if (type === 'updateUser') {
-		room = 'user:'+room;
-		response.uid = uid;
-	}
-	db.update(type, info, function () {
-		cb({});
-		socket.broadcast.to(room).emit(type,response);
-		return push.event(uid, uids(room,uid), response, function() {});
+function newActivity (uid, type, title, verb, cb) {
+	db.newActivity( type, title, verb, function (aid) {
+		cb({aid:aid});
+		var res = {
+			aid: aid,
+			type: type,
+			title: title,
+			verb: verb
+		};
+		socket.broadcast.to('user:'+uid).emit('newAct', res);
+		return push.friends(uid, uids('user:'+uid,uid), {evt:'newAct',info:res});
 	});
-};
+}
+
+function joinEvent (uid, eid, evts, socket, cb) {
+	db.joinEvent(uid, eid, function () {
+		socket.join('event:'+eid);
+		cb({});
+		var res = {
+			uid: uid,
+			eid: eid
+		};
+		socket.broadcast.to('event:'+eid).emit('joinEvent', res);
+		return push.event(uid, uids('event:'+eid,uid), {evt:'joinEvent', info:res});
+	});
+}
+
+function update (data, socket, cb) {
+	var room = String(data.type)+':'+String(data.iden);
+	var res = { 
+		type: data.type,
+		iden: data.iden,
+		field: data.field,
+		value: data.value
+	};
+	db.update(data, function () {
+		cb({});
+		socket.broadcast.to(room).emit('newUpdate',res);
+		return push.event(uid, uids(room,uid), {evt:'newUpdate', info:res});
+	});
+}
 
 process.on("uncaughtException", function(err) { console.log(err); });

@@ -4,7 +4,7 @@ var apn = require('apn'),
 var connection = new apn.Connection({'gateway':'gateway.sandbox.push.apple.com'});
 var test = new apn.Device('6de845f34b2dec914bd161feca1a9a3e6ea0b448818358cac1529313c7756619');
 
-function sendNotifications (devices, alert, json, cb) {
+function sendNotifications (devices, alert, json) {
 	var note = new apn.Notification();
 	note.payload = json;
 	note.alert = alert;
@@ -13,20 +13,19 @@ function sendNotifications (devices, alert, json, cb) {
 		note.badge = device.noteCount;
 		connection.pushNotification(note,device);
 	});
-	return cb();
 };
 
-exports.friends = function (uid, connectedUsers, json, cb) {
+exports.friends = function (uid, connectedUsers, json) {
 	db.notifyFriends(uid, connectedUsers, json, function (devices) {
 		var alert = 'Friend:'+String(uid)+' is open.';
-		return sendNotifications(devices, alert, json, cb);
+		return sendNotifications(devices, alert, json);
 	});
 };
 
-exports.event = function (eid, connectedUsers, json, cb) {
+exports.event = function (eid, connectedUsers, json) {
 	db.notifyEvent(eid, connectedUsers, json, function (devices) {
 		var alert = 'Event:'+String(eid)+' has been updated.';
-		return sendNotifications(devices, alert, json, cb);
+		return sendNotifications(devices, alert, json);
 	});
 };
 

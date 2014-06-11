@@ -11,7 +11,8 @@
     "express": "latest",
     "socket.io": "latest",
     "foursquarevenues": "latest",
-    "hat": "latest"
+    "hat": "latest",
+    "socket.io-client": "latest"
   },
   "devDependencies": {
     "grunt": "~0.4.2",

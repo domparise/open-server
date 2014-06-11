@@ -1,6 +1,7 @@
-var server = require('https').createServer(config.keys),
-	io = require('socket.io').listen(server, {log:false});
-
+var server = require('https').createServer(require('./config.js').keys),
+	io = require('socket.io').listen(server, {log:false}),
+	util = require('util'),
+	hat = require('hat');
 
 var logStream = require('fs').createWriteStream('logs/sockets-'+String(Date.now())+'.txt');
 function log (str, obj) {
@@ -13,7 +14,7 @@ server.listen(3000,function(){
 });
 
 var unknownUsers = {};
-exports.handle = function (auth, bind, add, update, fetch, fetchAll, disconnect) {
+exports.handle = function (auth, bind, add, update, fetch, disconnect) {
 
 	io.configure(function (){
 		// requires: {uid,authToken}
@@ -61,10 +62,11 @@ exports.handle = function (auth, bind, add, update, fetch, fetchAll, disconnect)
 		});
 
 		// requires: {uid, type, info:{...} }
-		// 	type: [user, event, activity]
-		// info: 	user: {name,email,authTOken}
-		// 			event: {start,end,aid}
-		// 			activity: {type,title,verb}
+		//  type: [user, event, activity, join]
+		// info: user: {name,email,authToken}
+		//       event: {start,end,aid}
+		//       activity: {type,title,verb}
+		//       join: {eid, evts:[...]}
 		// returns: [uid,eid,aid]
 		socket.on('add', function (data, cb) {
 			log('ADD',data);
@@ -72,27 +74,23 @@ exports.handle = function (auth, bind, add, update, fetch, fetchAll, disconnect)
 			return add( data.uid, data.type, data.info, socket, cb);
 		});
 
-		// requires: {uid, type, info: {id,field,value} }
-		//	field: [start,end,type,location,attendees]
+		// requires: {uid, type, iden, field, value}
+		//	field: [start,end,type,location]
 		//	type: [user, event]
-		// emits: {type, update: {id,field,value} }
+		// emits: {type, id, field, value}
 		// returns: success: {}, failure: {error}
 		socket.on('update', function (data, cb) {
 			log('UPDATE',data);
 			console.log(util.format('UPDATE: %j',data));
-			return update( data.uid, data.type, data.info, socket, cb);
+			return update( data, socket, cb);
 		});
 
-		// requires: {type, value}
-		// 	type: [uid, eid, aid, events, friends, activities]
-		// returns: fetched value
+		// requires: {uid}
+		// returns fetched values, array of notifications
 		socket.on('fetch', function (data, cb) {
 			log('FETCH',data);
 			console.log(util.format('FETCH: %j',data));
-			if (data.value === undefined) ////// NOT IMPLEMENTED YET
-				return fetchAll(data.type, cb); // no db.fetchAll yet
-			else
-				return fetch(data.type, data.value, cb);
+			return fetch( data.uid, cb);
 		});
 
 		socket.on('disconnect', function () {
@@ -100,9 +98,4 @@ exports.handle = function (auth, bind, add, update, fetch, fetchAll, disconnect)
 			disconnect(socket.uid);
 		});
 	});
-}
-
-exports.uids = function (room, uid) {
-
 };
-
