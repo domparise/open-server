@@ -1,25 +1,6 @@
 {
-  "name": "open",
-  "version": "0.0.1",
-  "private": true,
-  "author": "Dom Parise",
-  "scripts": {
-    "start": "node app.js"
-  },
-  "dependencies": {
-    "apn": "latest",
-    "express": "latest",
-    "socket.io": "latest",
-    "foursquarevenues": "latest",
-    "hat": "latest",
-    "socket.io-client": "latest"
-  },
-  "devDependencies": {
-    "grunt": "~0.4.2",
-    "grunt-contrib-jshint": "~0.8.0",
-    "grunt-nodemon": "~0.1.2",
-    "express": "~3.4.8",
-    "apn": "~1.4.4",
-    "socket.io": "~0.9.16"
-  }
+    "dependencies": {
+        "socket.io":"0.9.3",
+        "mongoose":"latest"
+    }
 }

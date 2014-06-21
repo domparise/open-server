@@ -1,132 +1,69 @@
-var db = require('./db/mysql.js'),
-	config = require('./config.js'),
-	sockets = require('./sockets.js'),
-	push = require('./push/push.js'),
-	util = require('util'),
-	fs = require('fs'),
-	connected = {};
+/*
+    Dom Parise - 6/17/14 - chat app 
+    sockets.js
 
-var logStream = fs.createWriteStream('logs/app-'+String(Date.now())+'.txt');
-function log (str, obj) {
-	logStream.write(Date.now()+', '+str+', '+util.format('%j',obj)+'\n');
-}
+    This file encapsulates all of the socket.io event handling logic
+*/
 
-//////////// pubsub ////////////
+var io = require('socket.io').listen(3000) 
 
-function pubsub (room, uid) {
-	if (!(room in connected)) connected[room] = {};
-	connected[room][uid] = true;
-}
-function unpubsub (uid) {
-	for (var room in connected) {
-		delete connected[room][uid];
-	}
-}
-function uids (room, uid) {
-	return Object.keys(connected[room]).map(function(elt){return elt;});
-}
+var User = require('./model/user.js'),
+    push = require('push_server')
 
-/////////////// socket handlers ////////////////
 
-sockets.handle( db.authenticate, bind, add, update, push.fetch, unpubsub);
+require('mongoose').connect('mongodb://localhost:27017/open')
 
-function bind (uid, socket, cb) {
-	db.fetchFriends(uid, function (friends) {
-		friends.forEach( function (f) {
-			socket.join('user:'+f.uid);
-			pubsub('user:'+f.uid,uid);
-		});
-		db.fetchAttended(uid, function (events) {
-			events.forEach( function (e) {
-				socket.join('event:'+e.eid);
-				pubsub('event:'+e.eid,uid);
-			});
-			return cb({});
-		});
-	});
-}
+// var io = require('socket.io')(srv); 
+// writing module of this as anonymous function is like declaring the internals of it
+// inverse of this is like swinging around the function, in callback you're hanging below it
+// either way, io gets crafted
 
-function add (uid, type, info, socket, cb) {
-	if (type == 'user') 
-		newUser( info.name, info.email, info.authToken, socket, cb);
-	else if (type == 'event')
-		newOtb( uid, info.start, info.end, info.aid, socket, cb);
-	else if (type == 'activity') 
-		newActivity( uid, info.type, info.title, info.verb, socket, cb);
-	else if (type == 'join')
-		joinEvent( uid, info.eid, info.evts, socket, cb);
-}
+io.configure(function (){
+    // requires: {uid,authToken}
+    io.set('authorization', function (handshake, cb) {
+        log('auth handshake',handshake.query);
+        console.log('handshaking');
+        return cb(null, true);
+    });
+});
 
-function newUser (name, email, authToken, socket, cb) {
-	db.newUser( name, email, authToken, function (uid) {
-		cb({uid:uid});
-		db.fetchAllPeeps(function(peeps) {
-			peeps.forEach( function(elt) {
-				db.makeFriends(uid,elt.uid, function () {
-					if(uid !== elt.uid) socket.emit('newFriend',elt);
-					socket.join('user:'+elt.uid);
-				});
-			});
-		});
-	});
-}
 
-function newOtb (uid, start, end, aid, socket, cb) {
-	db.newOtb(uid,start,end,aid, function(eid) {
-		socket.join('event:'+eid);
-		cb({eid:eid});
-		var res = {
-			eid  : eid,
-			start: start,
-			end  : end,
-			aid  : aid,
-			attendees:[uid]
-		};
-		socket.broadcast.to('user:'+uid).emit('newOtb', res);
-		return push.friends(uid, uids('user:'+uid,uid), {evt:'newOtb',info:res});
-	});
-}
+io.on('connection', function (socket) {
 
-function newActivity (uid, type, title, verb, cb) {
-	db.newActivity( type, title, verb, function (aid) {
-		cb({aid:aid});
-		var res = {
-			aid: aid,
-			type: type,
-			title: title,
-			verb: verb
-		};
-		socket.broadcast.to('user:'+uid).emit('newAct', res);
-		return push.friends(uid, uids('user:'+uid,uid), {evt:'newAct',info:res});
-	});
-}
+    // send suggestions to user, spin up suggestion engine based on time
+    socket.on('newUser', function (data) {
+        // data.user
+        console.log('newUser')
+        var user = new User()
+        user.info = data.info;
+        push.addUser(data.deviceToken, function (uid) {
+            user.uid = uid;
+            user.save();
+        });
+    });
 
-function joinEvent (uid, eid, evts, socket, cb) {
-	db.joinEvent(uid, eid, function () {
-		socket.join('event:'+eid);
-		cb({});
-		var res = {
-			uid: uid,
-			eid: eid
-		};
-		socket.broadcast.to('event:'+eid).emit('joinEvent', res);
-		return push.event(uid, uids('event:'+eid,uid), {evt:'joinEvent', info:res});
-	});
-}
+    socket.on('otb', function (data) {
+        // start, end, id
+        User.fetch(data.info, function (user) {
+            user.otb.push({ start: data.start, end: data.end });
+            user.save();
+        });
+    });
 
-function update (data, socket, cb) {
-	var room = String(data.type)+':'+String(data.iden);
-	var res = { 
-		type: data.type,
-		iden: data.iden,
-		field: data.field,
-		value: data.value
-	};
-	db.update(data, function () {
-		cb({});
-		socket.broadcast.to(room).emit('newUpdate',res);
-		return push.event(uid, uids(room,uid), {evt:'newUpdate', info:res});
-	});
-}
+    socket.on('result', function (data) {
+        // do some math
+        User.fetch(data.info, function (user) {
+        
 
-process.on("uncaughtException", function(err) { console.log(err); });
+        });
+    });
+
+    socket.on('fetch', function (data, cb) {
+        User.fetch(data.info, function (user) {
+            push.fetch(user.uid, cb);
+        });
+    });
+
+});
+
+function log (str, obj) {require('fs').createWriteStream('logs/app-'+String(Date.now())+'.txt').write(Date.now()+', '+str+', '+require('util').format('%j',obj)+'\n');}
