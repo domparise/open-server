@@ -5,6 +5,8 @@ var mongoose = require('mongoose');
 
 var userSchema = mongoose.Schema({
 
+    info:{},
+
     display_name : String, 
     email: String,
     uid: Number,
@@ -35,7 +37,7 @@ var userSchema = mongoose.Schema({
 });
 
 userSchema.statics.fetch = function (info, cb) {
-    this.findOne(info, function(err, user) {
+    this.findOne({info:info}, function(err, user) {
         if(err) throw (err);
         return cb(user);
     });
